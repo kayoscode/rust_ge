@@ -20,6 +20,7 @@ pub trait StandardVec<T: Vectorable<T>>
     fn length(&self) -> T {
         self.length_sq().sqrt()
     }
+
     fn length_sq(&self) -> T;
 
     fn normalize(&mut self) {
