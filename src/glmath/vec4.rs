@@ -1,4 +1,7 @@
-use crate::rootable::Rootable;
+use std::ops::Add;
+use std::process::Output;
+
+use crate::vectorable::Vectorable;
 use crate::glmath::*;
 
 #[derive(Debug, Copy, Clone, Default, PartialEq)]
@@ -10,7 +13,7 @@ pub struct Vec4<T: PartialOrd + Copy> {
 }
 
 impl
-    <T: PartialOrd + Copy + Rootable<T> + 
+    <T: PartialOrd + Copy + Vectorable<T> + 
         std::ops::Mul<Output = T> + 
         std::ops::Add<Output = T> +
         std::ops::Div<Output = T> + 
@@ -28,14 +31,12 @@ impl
         self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
     }
 
-    fn normalize(&mut self) -> Vec4<T> {
+    fn normalize(&mut self) {
         let len = self.length();
         self.x /= len;
         self.y /= len;
         self.z /= len;
         self.w /= len;
-
-        *self
     }
 
     fn get_normalized(&self) -> Self {
@@ -47,7 +48,21 @@ impl
 
 impl<T: PartialOrd + Copy> Vec4<T> {
     pub fn new(x: T, y: T, z: T, w: T) -> Vec4<T> {
-        Vec4::<T> { x: x, y: y, z: z, w: w }
+        Vec4::<T> { x, y, z, w }
+    }
+}
+
+impl<T: PartialOrd + Copy + 
+    Mul<Output = T> +
+    Add<Output = T>> Mul<Vec4<T>> for Vec4<T> 
+{
+    type Output = T;
+
+    fn mul(self, rhs: Vec4<T>) -> Self::Output {
+        self.x * rhs.x + 
+            self.y * rhs.y + 
+            self.z * rhs.z + 
+            self.w * rhs.w
     }
 }
 
@@ -105,7 +120,7 @@ impl<T: PartialOrd + Copy> FourDimVec<T> for Vec4<T> {
     }
 
     fn xyzw(&self) -> Vec4<T> {
-        Vec4::<T> { x: self.x, y: self.y, z: self.z, w: self.w }
+        self.clone()
     }
 
     fn yxzw(&self) -> Vec4<T> {

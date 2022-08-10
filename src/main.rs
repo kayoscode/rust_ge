@@ -3,10 +3,15 @@ mod glmath;
 use glmath::*;
 
 fn main() {
-    let mut v1 = Vec3f::new(3.0, 4.0, 100.0);
-    v1.normalize();
+    let mut v1 = Vec2f::new(0.0, 1.0);
+    let mut v2 = Vec2f::new(1.0, 0.0);
 
-    println!("The length squared is: {}", v1.length_sq());
-    println!("The length is: {}", v1.length());
-    println!("{} {} {}", v1.x, v1.y, v1.z);
+    dbg!(v1);
+    dbg!(v2);
+
+    println!("Angle between: {}", v1.angle_between(&v2));
+
+    if v1 == v2 {
+        println!("{} {}", v1.length(), v2.length());
+    }
 }

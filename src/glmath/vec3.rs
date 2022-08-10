@@ -1,7 +1,9 @@
-use crate::rootable::Rootable;
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign, Mul, MulAssign};
+
+use crate::vectorable::Vectorable;
 use crate::glmath::*;
 
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Vec3<T: PartialOrd + Copy> {
     pub x: T,
     pub y: T,
@@ -9,7 +11,7 @@ pub struct Vec3<T: PartialOrd + Copy> {
 }
 
 impl
-    <T: PartialOrd + Copy + Rootable<T> + 
+    <T: PartialOrd + Copy + Vectorable<T> + 
         std::ops::Mul<Output = T> + 
         std::ops::Add<Output = T> + 
         std::ops::Div<Output = T> + 
@@ -27,13 +29,11 @@ impl
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    fn normalize(&mut self) -> Vec3<T> {
+    fn normalize(&mut self) {
         let len = self.length();
         self.x /= len;
         self.y /= len;
         self.z /= len;
-
-        *self
     }
 
     fn get_normalized(&self) -> Vec3<T> {
@@ -44,7 +44,113 @@ impl
 
 impl<T: PartialOrd + Copy> Vec3<T> {
     pub fn new(x: T, y: T, z: T) -> Vec3<T> {
-        Vec3::<T> { x: x, y: y, z: z}
+        Vec3::<T> { x, y, z }
+    }
+}
+
+impl<T: PartialOrd + Copy + Vectorable<T>> PartialEq for Vec3<T> 
+    where Vec3<T>: StandardVec<T>,
+    T: Mul<Output = T> + Div<Output = T>
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.length() == other.length()
+    }
+}
+
+impl<T: PartialOrd + Copy + Vectorable<T>> PartialOrd for Vec3<T>
+    where Vec3<T>: StandardVec<T>,
+    T: Mul<Output = T> + Div<Output = T>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let len = self.length();
+        let other_len = other.length();
+
+        len.partial_cmp(&other_len)
+    }
+}
+
+impl<T: PartialOrd + Copy + std::ops::Neg<Output = T>> Neg for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn neg(self) -> Self::Output {
+        Vec3::<T> {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + Add<Output = T>> Add<Vec3<T>> for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn add(self, rhs: Vec3<T>) -> Self::Output {
+        Vec3::<T> {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + AddAssign> AddAssign for Vec3<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+    }
+}
+
+impl<T: PartialOrd + Copy + Sub<Output = T>> Sub<Vec3<T>> for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn sub(self, rhs: Vec3<T>) -> Self::Output {
+        Vec3::<T> {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + SubAssign> SubAssign for Vec3<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
+    }
+}
+
+// Scalar multiples.
+impl<T: PartialOrd + Copy + Mul<Output = T>> Mul<T> for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+         Vec3::<T> {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs
+        }       
+    }
+}
+
+impl<T: PartialOrd + Copy + MulAssign> MulAssign<T> for Vec3<T> {
+    fn mul_assign(&mut self, rhs: T) {
+        self.x *= rhs;
+        self.y *= rhs;
+        self.z *= rhs;
+    }
+}
+
+// Dot product.
+impl<T: PartialOrd + Copy + 
+    Mul<Output = T> + 
+    Add<Output = T>> Mul<Vec3<T>> for Vec3<T> 
+{
+    type Output = T;
+
+    fn mul(self, rhs: Vec3<T>) -> Self::Output {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 }
 
@@ -72,7 +178,7 @@ impl<T: PartialOrd + Copy> ThreeDimVec<T> for Vec3<T> {
     }
 
     fn xyz(&self) -> Vec3<T> {
-        Vec3::<T> { x: self.x, y: self.y, z: self.z }
+        self.clone()
     }
 
     fn yxz(&self) -> Vec3<T> {

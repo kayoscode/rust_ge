@@ -1,16 +1,17 @@
-use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
+use std::process::Output;
 
-use crate::rootable::Rootable;
+use crate::vectorable::Vectorable;
 use crate::glmath::*;
 
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Vec2<T: PartialOrd + Copy> {
     pub x: T,
     pub y: T
 }
 
 impl
-    <T: PartialOrd + Copy + Rootable<T> + 
+    <T: PartialOrd + Copy + Vectorable<T> + 
         std::ops::Mul<Output = T> + 
         std::ops::Add<Output = T> + 
         std::ops::Div<Output = T> +
@@ -28,11 +29,10 @@ impl
         self.x * self.x + self.y * self.y
     }
 
-    fn normalize(&mut self) -> Vec2<T> {
+    fn normalize(&mut self) {
         let len = self.length();
         self.x /= len;
         self.y /= len;
-        *self
     }
 
     fn get_normalized(&self) -> Vec2<T> {
@@ -43,7 +43,36 @@ impl
 
 impl<T: PartialOrd + Copy> Vec2<T> {
     pub fn new(x: T, y: T) -> Vec2<T> {
-        Vec2::<T> { x: x, y: y }
+        Vec2::<T> { x, y }
+    }
+}
+
+impl<T: PartialOrd + Copy + Vectorable<T>> PartialEq for Vec2<T> 
+    where Vec2<T>: StandardVec<T>,
+    T: Mul<Output = T> + Div<Output = T>
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.length() == other.length()
+    }
+}
+
+impl<T: PartialOrd + Copy + Vectorable<T>> PartialOrd for Vec2<T> 
+    where Vec2<T>: StandardVec<T>,
+    T: Mul<Output = T> + Div<Output = T>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let len = Vec2::<T>::length(&self);
+        let other_len = Vec2::<T>::length(&other);
+
+        len.partial_cmp(&other_len)
+    }
+}
+
+impl<T: PartialOrd + Copy + std::ops::Neg<Output = T>> Neg for Vec2<T> {
+    type Output = Vec2<T>;
+
+    fn neg(self) -> Self::Output {
+        Vec2::<T> { x: -self.x, y: -self.y }
     }
 }
 
@@ -83,18 +112,16 @@ impl<T: PartialOrd + Copy + std::ops::SubAssign<T>> SubAssign<Vec2<T>> for Vec2<
     }
 }
 
-impl<T: PartialOrd + Copy + std::ops::Mul<Output = T>> Mul<Vec2<T>> for Vec2<T> {
-    type Output = Vec2<T>;
+// Dot product.
+impl<T: PartialOrd + Copy + 
+    std::ops::Mul<Output = T> +
+    std::ops::Add<Output = T>> Mul<Vec2<T>> for Vec2<T> 
+{
+    type Output = T;
 
-    fn mul(self, rhs: Vec2<T>) -> Vec2<T> {
-        Vec2::<T>::new(self.x * rhs.x, self.y * rhs.y)
-    }
-}
-
-impl<T: PartialOrd + Copy + std::ops::MulAssign<T>> MulAssign<Vec2<T>> for Vec2<T> {
-    fn mul_assign(&mut self, rhs: Vec2<T>) {
-        self.x *= rhs.x;
-        self.y *= rhs.y;
+    // Computes and returns the dot product as a scalar.
+    fn mul(self, rhs: Vec2<T>) -> T {
+        self.x * rhs.x + self.y * rhs.y
     }
 }
 
@@ -125,7 +152,7 @@ impl<T: PartialOrd + Copy +
     }
 
     fn xy(&self) -> Vec2<T> {
-        *self
+        self.clone()
     }
 
     fn yx(&self) -> Vec2<T> {
