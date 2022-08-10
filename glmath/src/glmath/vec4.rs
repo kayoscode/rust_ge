@@ -1,10 +1,7 @@
-use std::ops::Add;
-use std::process::Output;
-
-use crate::vectorable::Vectorable;
+use std::{ops::{Add, MulAssign, AddAssign, SubAssign, Sub, Neg}, fmt::Display};
 use crate::glmath::*;
 
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Vec4<T: PartialOrd + Copy> {
     pub x: T,
     pub y: T,
@@ -20,29 +17,15 @@ impl
         std::ops::DivAssign<T>> 
         StandardVec<T> for Vec4<T> 
 {
-    /// Computes the full length of the vector.
-    fn length(&self) -> T {
-        let len_sq: T = self.length_sq();
-        len_sq.sqrt()
-    }
-
     /// Computes the squared length of the vector2.
     fn length_sq(&self) -> T {
         self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
     }
+}
 
-    fn normalize(&mut self) {
-        let len = self.length();
-        self.x /= len;
-        self.y /= len;
-        self.z /= len;
-        self.w /= len;
-    }
-
-    fn get_normalized(&self) -> Self {
-        let len = self.length();
-
-        Vec4::<T>::new(self.x / len, self.y / len, self.z / len, self.w / len)
+impl<T: PartialOrd + Copy + Display> Display for Vec4<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}, {}, {}, {}]", self.x, self.y, self.z, self.w)
     }
 }
 
@@ -52,6 +35,131 @@ impl<T: PartialOrd + Copy> Vec4<T> {
     }
 }
 
+impl<T: PartialOrd + Copy + Vectorable<T>> PartialEq for Vec4<T> 
+    where Vec4<T>: StandardVec<T>,
+    T: Mul<Output = T> + Div<Output = T>
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.length() == other.length()
+    }
+}
+
+impl<T: PartialOrd + Copy + Vectorable<T>> PartialOrd for Vec4<T>
+    where Vec4<T>: StandardVec<T>,
+    T: Mul<Output = T> + Div<Output = T>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let len = self.length();
+        let other_len = other.length();
+
+        len.partial_cmp(&other_len)
+    }
+}
+
+impl<T: PartialOrd + Copy + Neg<Output = T>> Neg for Vec4<T> {
+    type Output = Vec4<T>;
+
+    fn neg(self) -> Self::Output {
+        Vec4::<T> {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+            w: -self.w
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + Add<Output = T>> Add<Vec4<T>> for Vec4<T> {
+    type Output = Vec4<T>;
+
+    fn add(self, rhs: Vec4<T>) -> Self::Output {
+        Vec4::<T> {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+            w: self.w + rhs.w
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + AddAssign> AddAssign for Vec4<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+        self.w += rhs.w;
+    }
+}
+
+impl<T: PartialOrd + Copy + Sub<Output = T>> Sub<Vec4<T>> for Vec4<T> {
+    type Output = Vec4<T>;
+
+    fn sub(self, rhs: Vec4<T>) -> Self::Output {
+        Vec4::<T> {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+            w: self.w - rhs.w
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + SubAssign> SubAssign for Vec4<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
+        self.w -= rhs.w;
+    }
+}
+
+// Scalar multiples.
+impl<T: PartialOrd + Copy + Mul<Output = T>> Mul<T> for Vec4<T> {
+    type Output = Vec4<T>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        Vec4::<T> {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+            w: self.w * rhs
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + MulAssign> MulAssign<T> for Vec4<T> {
+    fn mul_assign(&mut self, rhs: T) {
+        self.x *= rhs;
+        self.y *= rhs;
+        self.z *= rhs;
+        self.w *= rhs;
+    }
+}
+
+// Scalar divides.
+impl<T: PartialOrd + Copy + Div<Output = T>> Div<T> for Vec4<T> {
+    type Output = Vec4<T>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        Vec4::<T> {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
+            w: self.w / rhs
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + DivAssign> DivAssign<T> for Vec4<T> {
+    fn div_assign(&mut self, rhs: T) {
+        self.x /= rhs;
+        self.y /= rhs;
+        self.z /= rhs;
+        self.w /= rhs;
+    }
+}
+
+// Dot product.
 impl<T: PartialOrd + Copy + 
     Mul<Output = T> +
     Add<Output = T>> Mul<Vec4<T>> for Vec4<T> 

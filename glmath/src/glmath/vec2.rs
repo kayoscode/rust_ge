@@ -1,13 +1,16 @@
-use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
-use std::process::Output;
-
-use crate::vectorable::Vectorable;
+use std::{ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg}, fmt::Display};
 use crate::glmath::*;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Vec2<T: PartialOrd + Copy> {
     pub x: T,
     pub y: T
+}
+
+impl<T: PartialOrd + Copy + Display> Display for Vec2<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}, {}]", self.x, self.y)
+    }
 }
 
 impl
@@ -18,26 +21,9 @@ impl
         std::ops::DivAssign<T>>
         StandardVec<T> for Vec2<T> 
 {
-    /// Computes the full length of the vector.
-    fn length(&self) -> T {
-        let len_sq: T = self.length_sq();
-        len_sq.sqrt()
-    }
-
     /// Computes the squared length of the vector2.
     fn length_sq(&self) -> T {
         self.x * self.x + self.y * self.y
-    }
-
-    fn normalize(&mut self) {
-        let len = self.length();
-        self.x /= len;
-        self.y /= len;
-    }
-
-    fn get_normalized(&self) -> Vec2<T> {
-        let len = self.length();
-        Vec2::<T>::new(self.x / len, self.y / len)
     }
 }
 
@@ -130,7 +116,10 @@ impl<T: PartialOrd + Copy + std::ops::Mul<Output = T>> Mul<T> for Vec2<T> {
     type Output = Vec2<T>;
 
     fn mul(self, rhs: T) -> Vec2<T>{
-        Vec2::<T>::new(self.x * rhs, self.y * rhs)
+        Vec2::<T> {
+            x: self.x * rhs,
+            y: self.y * rhs
+        }
     }
 }
 
@@ -138,6 +127,25 @@ impl<T: PartialOrd + Copy + std::ops::MulAssign<T>> MulAssign<T> for Vec2<T> {
     fn mul_assign(&mut self, rhs: T) {
         self.x *= rhs;
         self.y *= rhs;
+    }
+}
+
+// Divides the scale by a number.
+impl<T: PartialOrd + Copy + Div<Output = T>> Div<T> for Vec2<T> {
+    type Output = Vec2<T>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        Vec2::<T> {
+            x: self.x / rhs,
+            y: self.y / rhs
+        }
+    }
+}
+
+impl<T: PartialOrd + Copy + DivAssign> DivAssign<T> for Vec2<T> {
+    fn div_assign(&mut self, rhs: T) {
+        self.x /= rhs;
+        self.y /= rhs;
     }
 }
 

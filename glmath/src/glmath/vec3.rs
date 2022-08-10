@@ -1,6 +1,5 @@
-use std::ops::{Add, AddAssign, Neg, Sub, SubAssign, Mul, MulAssign};
+use std::{ops::{Add, AddAssign, Neg, Sub, SubAssign, Mul, MulAssign, Rem}, fmt::Display};
 
-use crate::vectorable::Vectorable;
 use crate::glmath::*;
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -8,6 +7,12 @@ pub struct Vec3<T: PartialOrd + Copy> {
     pub x: T,
     pub y: T,
     pub z: T
+}
+
+impl<T: PartialOrd + Copy + Display> Display for Vec3<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}, {}, {}]", self.x, self.y, self.z)
+    }
 }
 
 impl
@@ -18,27 +23,9 @@ impl
         std::ops::DivAssign<T>> 
         StandardVec<T> for Vec3<T> 
 {
-    /// Computes the full length of the vector.
-    fn length(&self) -> T {
-        let len_sq: T = self.length_sq();
-        len_sq.sqrt()
-    }
-
     /// Computes the squared length of the vector2.
     fn length_sq(&self) -> T {
         self.x * self.x + self.y * self.y + self.z * self.z
-    }
-
-    fn normalize(&mut self) {
-        let len = self.length();
-        self.x /= len;
-        self.y /= len;
-        self.z /= len;
-    }
-
-    fn get_normalized(&self) -> Vec3<T> {
-        let len = self.length();
-        Vec3::<T>::new(self.x / len, self.y / len, self.z / len)
     }
 }
 
@@ -142,6 +129,27 @@ impl<T: PartialOrd + Copy + MulAssign> MulAssign<T> for Vec3<T> {
     }
 }
 
+// Scalar divides.
+impl<T: PartialOrd + Copy + Div<Output = T>> Div<T> for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn div(self, rhs: T) -> Self::Output {
+         Vec3::<T> {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs
+        }       
+    }
+}
+
+impl<T: PartialOrd + Copy + DivAssign> DivAssign<T> for Vec3<T> {
+    fn div_assign(&mut self, rhs: T) {
+        self.x /= rhs;
+        self.y /= rhs;
+        self.z /= rhs;
+    }
+}
+
 // Dot product.
 impl<T: PartialOrd + Copy + 
     Mul<Output = T> + 
@@ -151,6 +159,19 @@ impl<T: PartialOrd + Copy +
 
     fn mul(self, rhs: Vec3<T>) -> Self::Output {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+// Cross product.
+impl<T: PartialOrd + Copy + Mul<Output = T> + Sub<Output = T>> Rem<Vec3<T>> for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn rem(self, rhs: Vec3<T>) -> Self::Output {
+        Vec3::<T> {
+            x: self.y * rhs.z - self.z * rhs.y, 
+            y: self.z * rhs.x - self.x * rhs.z, 
+            z: self.x * rhs.y - self.y * rhs.x
+        }
     }
 }
 

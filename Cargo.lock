@@ -40,6 +40,7 @@ name = "game_engine"
 version = "0.1.0"
 dependencies = [
  "glfw",
+ "glmath",
  "rand",
 ]
 
@@ -74,6 +75,10 @@ checksum = "5abed6d39a50226676aab893d6b4ad154da7e93fcdfed90d7696758a1b477ed1"
 dependencies = [
  "cmake",
 ]
+
+[[package]]
+name = "glmath"
+version = "0.1.0"
 
 [[package]]
 name = "libc"

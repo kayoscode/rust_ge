@@ -1,37 +1,43 @@
-pub mod vectorable;
-
+mod vectorable;
 pub mod vec2;
 pub mod vec3;
 pub mod vec4;
 
-use std::{ops::{Mul, Div}, process::Output};
-
-pub use vec2::Vec2;
-pub use vec3::Vec3;
-pub use vec4::Vec4;
-
+use std::ops::{Mul, Div, DivAssign};
+use vec2::Vec2;
+use vec3::Vec3;
+use vec4::Vec4;
 use self::vectorable::Vectorable;
 
 pub type Vec2f = Vec2<f32>;
 pub type Vec3f = Vec3<f32>;
 pub type Vec4f = Vec4<f32>;
 
-pub trait StandardVec<T: Vectorable<T>> where Self: Mul<Output = T> + Sized + Copy,
+pub trait StandardVec<T: Vectorable<T>> 
+    where Self: Mul<Output = T> + DivAssign<T> + Div<T, Output = Self> + Sized + Copy,
     T: Mul<Output = T> + Div<Output = T>
 {
-    fn length(&self) -> T;
+    fn length(&self) -> T {
+        self.length_sq().sqrt()
+    }
     fn length_sq(&self) -> T;
 
-    fn normalize(&mut self);
-    fn get_normalized(&self) -> Self;
+    fn normalize(&mut self) {
+        self.div_assign(self.length());
+    }
+
+    fn get_normalized(&self) -> Self {
+        self.div(self.length())
+    }
 
     fn angle_between(&self, other: &Self) -> T {
         let len = self.length();
         let other_len = other.length();
+        let combined_len = len * other_len;
 
         let dot = *self * *other;
 
-        let intermediate_value = dot / (len * other_len);
+        let intermediate_value = dot / combined_len;
         T::acos(&intermediate_value)
     }
 }
