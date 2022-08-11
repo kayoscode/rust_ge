@@ -1,5 +1,5 @@
 extern crate glmath;
-use glmath::*;
+use glmath::glmath::*;
 
 fn main() {
     let a = Quatf::new(0.0, 0.0, 0.0, 1.0);
