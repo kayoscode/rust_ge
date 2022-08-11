@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["mat22",""],["mat33",""],["mat44",""],["quat",""],["vec2",""],["vec3",""],["vec4",""]],"trait":[["FourDimSwizzle",""],["QuaternionSwizzle",""],["StandardMat",""],["StandardQuat",""],["StandardVec",""],["ThreeDimSwizzle",""],["TwoDimSwizzle",""]],"type":[["Mat22f",""],["Mat33f",""],["Mat44f",""],["Quatf",""],["Vec2f",""],["Vec3f",""],["Vec4f",""]]});
