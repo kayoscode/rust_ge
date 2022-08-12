@@ -1,5 +1,5 @@
 [package]
-name = "game_engine"
+name = "window"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,10 +7,6 @@ edition = "2021"
 
 [dependencies]
 ogl33 = { version = "0.2.0", features = ["debug_error_checks"]}
-imagine = "0.0.5"
 
-[dependencies.glmath]
-path = "./glmath"
-
-[dependencies.window]
-path = "./window"
+[dependencies.glfw]
+git = "https://github.com/bjz/glfw-rs.git"
