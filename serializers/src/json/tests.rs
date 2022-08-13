@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::json::lexer::*;
+    use crate::json::{lexer::*, self, parser::{JsonNode, JsonValueOps}};
 
     const HAPPY_TEST: &str = r#"{
         "glossary": {
@@ -37,6 +37,84 @@ mod tests {
             },
             "array": [1234567890123, -12.1, "S"]
         }"#;
+
+    #[test] 
+    fn test_parser_simple() {
+        // First case: string!
+        const STR_VALUE: &str = r#""test string""#;
+
+        let mut lexer = JsonLexer::from_raw_json(STR_VALUE).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+
+        match json_file {
+            Some(JsonNode::String(value)) => {
+                assert_eq!(value.get(), "test string");
+            },
+            _ => {
+                assert!(false);
+            }
+        }
+
+        const NUMBER_VALUE: &str = r#"-100123"#;
+
+        let mut lexer = JsonLexer::from_raw_json(NUMBER_VALUE).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+
+        match json_file {
+            Some(JsonNode::Number(value)) => {
+                assert_eq!(*value.get(), -100123);
+            }
+            _ => {
+                assert!(false);
+            }
+        }
+
+        const FLOAT_VALUE: &str = r#"-10.0123e2"#;
+
+        let mut lexer = JsonLexer::from_raw_json(FLOAT_VALUE).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+
+        match json_file {
+            Some(JsonNode::Float(value)) => {
+                assert_eq!(*value.get(), -1001.23);
+            }
+            _ => {
+                assert!(false);
+            }
+        }
+
+        const ARRAY_VALUE: &str = r#"[1, 2, 3.12, 4, 5, 6]"#;
+        let mut lexer = JsonLexer::from_raw_json(ARRAY_VALUE).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+
+        match json_file {
+            Some(JsonNode::Float(value)) => {
+                assert_eq!(*value.get(), -1001.23);
+            }
+            Some(JsonNode::Array(array)) => {
+                for i in 0..array.size() {
+                    let a = array.get(i).expect("fail?");
+
+                    match a {
+                        JsonNode::Object(_) => todo!(),
+                        JsonNode::Array(_) => todo!(),
+                        JsonNode::Number(num) => { 
+                            println!("{}", *num.get());
+                        }
+                        JsonNode::Float(num) => {
+                            println!("{}", *num.get());
+                        },
+                        JsonNode::Bool(_) => todo!(),
+                        JsonNode::String(_) => todo!(),
+                        JsonNode::Null => todo!(),
+                    }
+                }
+            },
+            _ => {
+                assert!(false);
+            }
+        }
+    }
 
     #[test]
     fn test_unterminated_str() {

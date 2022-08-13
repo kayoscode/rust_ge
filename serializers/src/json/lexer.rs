@@ -76,6 +76,28 @@ impl JsonLexer {
         })
     }
 
+    /// Resets the lexer to the first token in the stream.
+    pub fn reset(&mut self) {
+        self.index = 0;
+    }
+
+    /// Returns the text associated with a token as a String.
+    pub fn get_lexeme(&self, token: &Token) -> Option<String> {
+        let json_text = self.json_text.as_bytes();
+
+        if token.lex_end <= json_text.len() {
+            let token_slice = &json_text[token.lex_start..token.lex_end];
+
+            return Some(match String::from_utf8_lossy(token_slice) {
+                std::borrow::Cow::Borrowed(lex) => String::from_str(lex).unwrap(),
+                std::borrow::Cow::Owned(lex) => lex
+            })
+        }
+
+        None
+    }
+
+    /// Creates a parser from raw string info.
     pub fn from_raw_json(raw_json: &str) -> Option<JsonLexer> {
         Some(JsonLexer { 
             json_text: match String::from_str(raw_json) {
@@ -143,6 +165,11 @@ fn get_integer_num(json: &[u8], index: &mut usize, size: usize) {
 
     while (ch as char).is_numeric() && !is_eof(*index, size) {
         *index += 1;
+
+        if is_eof(*index, size) {
+            return;
+        }
+
         ch = json[*index];
     }
 }
@@ -155,34 +182,41 @@ fn load_number<'a>(json: &'a [u8], index: &mut usize, size: usize, new_token: &'
     *index += 1;
 
     get_integer_num(json, index, size);
-    ch = json[*index];
 
-    // If it has floating point notation, continue with parsing as a float.
-    if ch == '.' as u8 || ch == 'e' as u8 || ch == 'E' as u8 {
-        *index += 1;
-        flt = true;
-
-        get_integer_num(json, index, size);
+    if !is_eof(*index, size) {
         ch = json[*index];
 
-        if ch == 'e' as u8 || ch == 'E' as u8 {
+        // If it has floating point notation, continue with parsing as a float.
+        if ch == '.' as u8 || ch == 'e' as u8 || ch == 'E' as u8 {
             *index += 1;
-            ch = json[*index];
+            flt = true;
 
-            if ch == '-' as u8 || ch == '+' as u8 {
-                *index += 1;
+            get_integer_num(json, index, size);
+
+            if !is_eof(*index, size) {
                 ch = json[*index];
-            }
-            
-            if (ch as char).is_numeric() {
-                println!("ERROR: Exponential notation must have at least one digit");
-                return false;
-            }
-            else {
-                get_integer_num(json, index, size);
+
+                if ch == 'e' as u8 || ch == 'E' as u8 && !is_eof(*index + 1, size) {
+                    *index += 1;
+                    ch = json[*index];
+
+                    if ch == '-' as u8 || ch == '+' as u8 && !is_eof(*index + 1, size) {
+                        *index += 1;
+                        ch = json[*index];
+                    }
+                    
+                    if !(ch as char).is_numeric() {
+                        println!("ERROR: Exponential notation must have at least one digit");
+                        return false;
+                    }
+                    else {
+                        get_integer_num(json, index, size);
+                    }
+                }
             }
         }
     }
+
 
     new_token.lex_start = token_start;
     new_token.lex_end = *index - 1;
