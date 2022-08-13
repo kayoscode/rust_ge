@@ -137,7 +137,10 @@ pub struct KeyInputs {
     pub keys_released_frame: Vec<i32>
 }
 
-pub static mut KEY_INPUTS: KeyInputs = KeyInputs { keys_pressed_frame: vec![], keys_released_frame: vec![] };
+pub static mut KEY_INPUTS: KeyInputs = KeyInputs { 
+    keys_pressed_frame: vec![], 
+    keys_released_frame: vec![] 
+};
 
 pub extern "C" fn key_callback(_window: *mut GLFWwindow, key: i32, _scancode: i32, action: i32, _mods: i32) {
     unsafe {

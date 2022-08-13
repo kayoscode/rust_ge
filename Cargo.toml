@@ -14,3 +14,9 @@ path = "./glmath"
 
 [dependencies.window]
 path = "./window"
+
+[dependencies.timer]
+path = "./timer"
+
+[dependencies.serializers]
+path = "./serializers"

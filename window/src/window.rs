@@ -36,6 +36,8 @@ pub trait WindowControl {
     /// Updates the state of the input, updates the frame,
     /// and returns true if the window should close.
     fn update_window(&mut self) -> bool;
+    
+    /// Sends a message to close the window to the client.
     fn close_window(&mut self);
 
     /// Returns true if the key state if the key is 'down'
@@ -55,6 +57,9 @@ pub trait WindowControl {
     fn is_mouse_up(&mut self, button: mouse_input::MouseButton) -> bool {
         !self.is_mouse_down(button)
     }
+
+    // Returns the amount the mouse has scrolled in the X axis.
+    fn get_mouse_dx(&mut self) -> i32;
 }
 
 pub struct GraphicsWindow {
@@ -99,6 +104,10 @@ impl WindowControl for GraphicsWindow {
 
     fn is_mouse_clicked(&mut self, button: mouse_input::MouseButton) -> bool {
         self.mouse_button_input.clicked[button as usize]
+    }
+
+    fn get_mouse_dx(&mut self) -> i32 {
+        return 0;
     }
 }
 

@@ -42,6 +42,8 @@ dependencies = [
  "glmath",
  "imagine",
  "ogl33",
+ "serializers",
+ "timer",
  "window",
 ]
 
@@ -120,6 +122,14 @@ checksum = "b800beb9b6e7d2df1fe337c9e3d04e3af22a124460fb4c30fcc22c9117cefb41"
 dependencies = [
  "cty",
 ]
+
+[[package]]
+name = "serializers"
+version = "0.1.0"
+
+[[package]]
+name = "timer"
+version = "0.1.0"
 
 [[package]]
 name = "winapi"
