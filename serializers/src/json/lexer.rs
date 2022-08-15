@@ -17,7 +17,7 @@ impl Default for ReserveCode {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Reserve {
         reserve_id: ReserveCode
@@ -31,7 +31,9 @@ pub enum TokenType {
     Boolean {
         value: bool
     },
-    String,
+    String {
+        value: String
+    },
     Null,
     Undefined
 }
@@ -42,16 +44,14 @@ impl Default for TokenType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Token {
-    lex_start: usize,
-    lex_end: usize,
     token_type: TokenType
 }
 
 impl Token {
     pub fn get_type(&self) -> TokenType {
-        self.token_type
+        self.token_type.clone()
     }
 }
 
@@ -79,22 +79,6 @@ impl JsonLexer {
     /// Resets the lexer to the first token in the stream.
     pub fn reset(&mut self) {
         self.index = 0;
-    }
-
-    /// Returns the text associated with a token as a String.
-    pub fn get_lexeme(&self, token: &Token) -> Option<String> {
-        let json_text = self.json_text.as_bytes();
-
-        if token.lex_end <= json_text.len() {
-            let token_slice = &json_text[token.lex_start..token.lex_end];
-
-            return Some(match String::from_utf8_lossy(token_slice) {
-                std::borrow::Cow::Borrowed(lex) => String::from_str(lex).unwrap(),
-                std::borrow::Cow::Owned(lex) => lex
-            })
-        }
-
-        None
     }
 
     /// Creates a parser from raw string info.
@@ -135,8 +119,9 @@ impl JsonLexer {
                 return;
             }
         }
-        // TODO: Load booleans.
-        // TODO: Load null.
+        else if load_boolean_or_null(json_text, &mut self.index, size, token) {
+            // load_boolean_or_null returns true if it successfully loaded a bool or null.
+        }
         else {
             // If it's a reserve, add it, otherwise there is an error :D
             if !load_reserve(json_text, &mut self.index, token) {
@@ -187,7 +172,7 @@ fn load_number<'a>(json: &'a [u8], index: &mut usize, size: usize, new_token: &'
         ch = json[*index];
 
         // If it has floating point notation, continue with parsing as a float.
-        if ch == '.' as u8 || ch == 'e' as u8 || ch == 'E' as u8 {
+        if ch == '.' as u8 {
             *index += 1;
             flt = true;
 
@@ -216,10 +201,6 @@ fn load_number<'a>(json: &'a [u8], index: &mut usize, size: usize, new_token: &'
             }
         }
     }
-
-
-    new_token.lex_start = token_start;
-    new_token.lex_end = *index - 1;
 
     if !flt {
         let as_str = String::from_utf8_lossy(&json[token_start..*index]);
@@ -274,9 +255,12 @@ fn load_string<'a>(json: &'a [u8], index: &mut usize, size: usize, new_token: &'
     if ch != '\n' as u8 {
         *index += 1;
 
-        new_token.token_type = TokenType::String;
-        new_token.lex_start = token_start;
-        new_token.lex_end = *index - 1;
+        new_token.token_type = TokenType::String { 
+            value: match String::from_utf8_lossy(&json[token_start..*index - 1]) {
+                std::borrow::Cow::Borrowed(lex) => String::from_str(lex).unwrap(),
+                std::borrow::Cow::Owned(lex) => lex
+            }
+        };
         true
     }
     else {
@@ -289,11 +273,7 @@ fn load_reserve<'a>(json: &'a [u8], index: &mut usize,
     new_token: &'a mut Token) -> bool 
 {
     let ch = json[*index] as char;
-    let token_start = *index;
     *index += 1;
-
-    new_token.lex_start = token_start;
-    new_token.lex_end = *index - 1;
     
     let mut err = false;
     match ch {
@@ -309,4 +289,36 @@ fn load_reserve<'a>(json: &'a [u8], index: &mut usize,
     }
 
     return !err;
+}
+
+fn load_boolean_or_null<'a>(json: &'a [u8], index: &mut usize, size: usize, new_token: &'a mut Token) -> bool {
+    let true_token = "true".as_bytes();
+    let false_token = "false".as_bytes();
+    let null_token = "null".as_bytes();
+
+    if !is_eof(*index + true_token.len(), size) {
+        if json[*index..(*index + true_token.len())].eq(true_token) {
+            *index += true_token.len();
+            new_token.token_type = TokenType::Boolean { value: true };
+            return true
+        }
+    }
+
+    if !is_eof(*index + false_token.len(), size) {
+        if json[*index..(*index + false_token.len())].eq(false_token) {
+            *index += false_token.len();
+            new_token.token_type = TokenType::Boolean { value: false };
+            return true
+        }
+    }
+
+    if !is_eof(*index + null_token.len(), size) {
+        if json[*index..(*index + null_token.len())].eq(null_token) {
+            *index += null_token.len();
+            new_token.token_type = TokenType::Null;
+            return true
+        }
+    }
+
+    false
 }

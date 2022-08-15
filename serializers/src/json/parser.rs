@@ -90,6 +90,15 @@ pub struct JsonValue<T: PartialEq + Clone> {
     value: T
 }
 
+impl<T: PartialEq + Clone> JsonValue<T> {
+    pub fn new(value: T) -> JsonValue<T> {
+        JsonValue {
+            value
+        }
+    }
+}
+
+
 pub trait JsonValueOps<T: PartialEq + Clone> {
     fn set(&mut self, value: T);
     fn get_mut(&mut self) -> &mut T;
@@ -134,35 +143,78 @@ pub fn parse_json(lexer: &mut JsonLexer) -> Option<JsonNode> {
 fn parse_node(lexer: &mut JsonLexer, token: &mut Token) -> Option<JsonNode> {
     // At this context, we are expecting anything except for syntax tokens.
     return match token.get_type() {
-        TokenType::Reserve { reserve_id } => {
-            match reserve_id {
-                ReserveCode::OpenBrace => parse_object(lexer, token),
-                ReserveCode::OpenBracket => parse_array(lexer, token),
-                _ => None
-            }
-        },
+        TokenType::Reserve { reserve_id: lexer::ReserveCode::OpenBrace } => parse_object(lexer, token),
+        TokenType::Reserve { reserve_id: lexer::ReserveCode::OpenBracket } => parse_array(lexer, token),
         TokenType::Number { value } => Some(JsonNode::Number(JsonValue { value })),
         TokenType::Float { value } => Some(JsonNode::Float(JsonValue { value })),
         TokenType::Boolean { value } => Some(JsonNode::Bool(JsonValue { value })),
-        TokenType::String => {
-            // Get the actual string from the lexer.
-            return match lexer.get_lexeme(token) {
-                Some(value) => {
-                    Some(JsonNode::String(JsonValue { value }))
-                }
-                // Error in lexer?
-                None => None
-            }
-        },
+        TokenType::String { value } => Some(JsonNode::String(JsonValue { value })),
         TokenType::Null => Some(JsonNode::Null),
-        TokenType::Undefined => None
+        TokenType::Undefined => None,
+        _ => {
+            println!("Expected a json node");
+            None
+        }
     }
 }
 
 fn parse_object(lexer: &mut JsonLexer, token: &mut Token) -> Option<JsonNode> {
     // We already know we are starting with an open brace, so just get the next token.
     lexer.next_token(token);
-    None
+
+    // Objects are formatted as follows: key: string: node: "json_node" 
+    // Then they can have a comma and another string: node, so on.
+    let mut obj = JsonObject::default();
+
+    // Handle empty object case.
+    if let TokenType::Reserve { reserve_id: lexer::ReserveCode::CloseBrace } = token.get_type() {
+        return Some(JsonNode::Object(obj));
+    }
+
+    'find_object: loop {
+        match token.get_type() {
+            TokenType::String { value } => {
+                lexer.next_token(token);
+
+                if let TokenType::Reserve { reserve_id: lexer::ReserveCode::Colon } = token.get_type() {
+                    lexer.next_token(token);
+
+                    // Load the next node.
+                    match parse_node(lexer, token) {
+                        Some(loaded_node) => {
+                            obj.add(value.as_str(), loaded_node);
+                            lexer.next_token(token);
+                        },
+                        None => return None
+                    }
+                }
+                else {
+                    println!("Expected ':'");
+                    return None;
+                }
+            },
+            _ => {
+                println!("Expected an object key");
+                return None;
+            }
+        }
+
+        // If there's no comma, we are done finding objects.
+        if let TokenType::Reserve { reserve_id: lexer::ReserveCode::Comma } = token.get_type() {
+            lexer.next_token(token);
+        }
+        else {
+            break 'find_object;
+        }
+    }
+
+    return if let TokenType::Reserve { reserve_id: lexer::ReserveCode::CloseBrace } = token.get_type() {
+        Some(JsonNode::Object(obj))
+    }
+    else {
+        println!("Expected '}}'");
+        None
+    }
 }
 
 fn parse_array(lexer: &mut JsonLexer, token: &mut Token) -> Option<JsonNode> {
@@ -172,10 +224,13 @@ fn parse_array(lexer: &mut JsonLexer, token: &mut Token) -> Option<JsonNode> {
     // Expect there to be a JsonNode and if there's a comma following it, expect another json node...
     let mut array = JsonArray::default();
 
+    // Handle empty array case.
+    if let TokenType::Reserve { reserve_id: lexer::ReserveCode::CloseBracket } = token.get_type() {
+        return Some(JsonNode::Array(array))
+    }
+
     'load_array_values: loop {
-        let node = parse_node(lexer, token);
-        
-        match node {
+        match parse_node(lexer, token) {
             Some(node) => {
                 array.add(node);
                 lexer.next_token(token);
@@ -192,5 +247,11 @@ fn parse_array(lexer: &mut JsonLexer, token: &mut Token) -> Option<JsonNode> {
         }
     }
 
-    Some(JsonNode::Array(array))
+    return if let TokenType::Reserve { reserve_id: lexer::ReserveCode::CloseBracket } = token.get_type() {
+        Some(JsonNode::Array(array))
+    }
+    else {
+        println!("Expected ']'");
+        None
+    }
 }

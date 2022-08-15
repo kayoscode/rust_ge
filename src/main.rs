@@ -11,11 +11,11 @@ fn main() {
     println!("duration: {}", stopwatch.elapsed_millis());
 
     while !window.update_window() {
-        unsafe {
-            if window.is_key_clicked(window::Key::Escape) {
-                window.close_window();
-            }
+        if window.is_key_clicked(window::Key::Escape) {
+            window.close_window();
+        }
 
+        unsafe {
             glClearColor(0.0, 0.0, 0.0, 0.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }

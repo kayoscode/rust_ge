@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::json::{lexer::*, self, parser::{JsonNode, JsonValueOps}};
+
+    use crate::json::{lexer::*, self, parser::{JsonNode, JsonValueOps, JsonArray, JsonValue, JsonObject}};
 
     const HAPPY_TEST: &str = r#"{
         "glossary": {
@@ -8,7 +9,9 @@ mod tests {
             "GlossDiv": {
                 "title": "S",
                 "count": 5.123,
-                "hours": -1
+                "hours": -1,
+                "is_true": false,
+                "test_null": null
             }
         },
         "array": [1234567890123, -12.1, "S"]
@@ -37,6 +40,37 @@ mod tests {
             },
             "array": [1234567890123, -12.1, "S"]
         }"#;
+
+    #[test]
+    /// Just a simple test to verify that empty objects are working as expected. 
+    /// They should parse, but there should just be nothing inside them.
+    fn test_with_empty_objets() {
+        const EMPTY_ARRAY: &str = r#"[]"#;
+        const EMPTY_OBJECT: &str = r#"{}"#;
+
+        let mut lexer = JsonLexer::from_raw_json(EMPTY_ARRAY).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+        
+        let expected_array = JsonArray::new();
+        let expected_object = JsonObject::new();
+
+        match json_file {
+            Some(JsonNode::Array(array)) => {
+                assert!(array.eq(&expected_array));
+            }
+            _ => assert!(false)
+        }
+
+        let mut lexer = JsonLexer::from_raw_json(EMPTY_OBJECT).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+
+        match json_file {
+            Some(JsonNode::Object(object)) => {
+                assert!(object.eq(&expected_object));
+            }
+            _ => assert!(false)
+        }
+    }
 
     #[test] 
     fn test_parser_simple() {
@@ -83,36 +117,61 @@ mod tests {
             }
         }
 
-        const ARRAY_VALUE: &str = r#"[1, 2, 3.12, 4, 5, 6]"#;
+        const ARRAY_VALUE: &str = r#"[1, 2, 3.12, 4, 5, 6, ["test", 12]]"#;
         let mut lexer = JsonLexer::from_raw_json(ARRAY_VALUE).unwrap();
         let json_file = json::parser::parse_json(&mut lexer);
 
-        match json_file {
-            Some(JsonNode::Float(value)) => {
-                assert_eq!(*value.get(), -1001.23);
-            }
-            Some(JsonNode::Array(array)) => {
-                for i in 0..array.size() {
-                    let a = array.get(i).expect("fail?");
+        let mut expected_array = JsonArray::default();
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(1)));
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(2)));
+        expected_array.add(JsonNode::Float(JsonValue::<f64>::new(3.12)));
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(4)));
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(5)));
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(6)));
 
-                    match a {
-                        JsonNode::Object(_) => todo!(),
-                        JsonNode::Array(_) => todo!(),
-                        JsonNode::Number(num) => { 
-                            println!("{}", *num.get());
-                        }
-                        JsonNode::Float(num) => {
-                            println!("{}", *num.get());
-                        },
-                        JsonNode::Bool(_) => todo!(),
-                        JsonNode::String(_) => todo!(),
-                        JsonNode::Null => todo!(),
-                    }
-                }
+        let mut expected_sub_arr = JsonArray::default();
+        expected_sub_arr.add(JsonNode::String(JsonValue::<String>::new("test".to_string())));
+        expected_sub_arr.add(JsonNode::Number(JsonValue::<i64>::new(12)));
+        expected_array.add(JsonNode::Array(expected_sub_arr));
+
+        assert!(match json_file {
+            Some(JsonNode::Array(array)) => {
+                array.eq(&expected_array)
+
             },
             _ => {
-                assert!(false);
+                false
             }
+        });
+
+        // Load the happy test and see if we parse it correctly.
+        let mut lexer = JsonLexer::from_raw_json(HAPPY_TEST).unwrap();
+        let json_file = json::parser::parse_json(&mut lexer);
+
+        let mut expected_object = JsonObject::default();
+        let mut glossary_object = JsonObject::default();
+        let mut glossary_div_object = JsonObject::default();
+
+        glossary_object.add("title", JsonNode::String(JsonValue::<String>::new("example glossary".to_string())));
+        glossary_div_object.add("title", JsonNode::String(JsonValue::<String>::new("S".to_string())));
+        glossary_div_object.add("count", JsonNode::Float(JsonValue::<f64>::new(5.123)));
+        glossary_div_object.add("hours", JsonNode::Number(JsonValue::<i64>::new(-1)));
+        glossary_div_object.add("is_true", JsonNode::Bool(JsonValue::<bool>::new(false)));
+        glossary_div_object.add("test_null", JsonNode::Null);
+        glossary_object.add("GlossDiv", JsonNode::Object(glossary_div_object));
+        expected_object.add("glossary", JsonNode::Object(glossary_object));
+
+        let mut expected_array = JsonArray::default();
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(1234567890123)));
+        expected_array.add(JsonNode::Float(JsonValue::<f64>::new(-12.1)));
+        expected_array.add(JsonNode::String(JsonValue::<String>::new("S".to_string())));
+        expected_object.add("array", JsonNode::Array(expected_array));
+
+        match json_file {
+            Some(JsonNode::Object(json_node)) => {
+                assert!(json_node.eq(&expected_object));
+            }
+            _ => assert!(false)
         }
     }
 
@@ -145,37 +204,23 @@ mod tests {
 
         let expected_token_types: Vec<TokenType> = vec![
             TokenType::Reserve { reserve_id: ReserveCode::OpenBrace },
-            TokenType::String,
+            TokenType::String { value: "glossary".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Reserve { reserve_id: ReserveCode::OpenBrace },
-            TokenType::String,
+            TokenType::String { value: "title".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::String,
+            TokenType::String { value: "example glossary".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
+            TokenType::String { value: "GlossDiv".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Reserve { reserve_id: ReserveCode::OpenBrace },
-            TokenType::String,
+            TokenType::String { value: "title".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::String,
+            TokenType::String { value: "S".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
+            TokenType::String { value: "count".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::Float { value: 5.123 },
-            TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
-            TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::Number { value: -1 },
-            TokenType::Reserve { reserve_id: ReserveCode::CloseBrace },
-            TokenType::Reserve { reserve_id: ReserveCode::CloseBrace },
-            TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            // The array.
-            TokenType::String,
-            TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::Reserve { reserve_id: ReserveCode::OpenBracket },
-            TokenType::Number { value: 1234567890123 },
-            TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::Undefined
+            TokenType::Number { value: 5123 },
         ];
         let mut current_token = 0;
 
@@ -184,6 +229,8 @@ mod tests {
             current_token += 1;
             lexer.next_token(&mut token);
         }
+
+        assert_eq!(current_token, expected_token_types.len());
     }
 
     #[test]
@@ -197,39 +244,49 @@ mod tests {
 
         let expected_token_types: Vec<TokenType> = vec![
             TokenType::Reserve { reserve_id: ReserveCode::OpenBrace },
-            TokenType::String,
+            TokenType::String { value: "glossary".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Reserve { reserve_id: ReserveCode::OpenBrace },
-            TokenType::String,
+            TokenType::String { value: "title".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::String,
+            TokenType::String { value: "example glossary".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
+            TokenType::String { value: "GlossDiv".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Reserve { reserve_id: ReserveCode::OpenBrace },
-            TokenType::String,
+            TokenType::String { value: "title".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
-            TokenType::String,
+            TokenType::String { value: "S".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
+            TokenType::String { value: "count".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Float { value: 5.123 },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
+            TokenType::String { value: "hours".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Number { value: -1 },
+            TokenType::Reserve { reserve_id: ReserveCode::Comma },
+            // Boolean and null tests
+            TokenType::String { value: "is_true".to_string() },
+            TokenType::Reserve { reserve_id: ReserveCode::Colon },
+            TokenType::Boolean { value: false },
+            TokenType::Reserve { reserve_id: ReserveCode::Comma },
+            TokenType::String { value: "test_null".to_string() },
+            TokenType::Reserve { reserve_id: ReserveCode::Colon },
+            TokenType::Null,
+            // End of bool and null tests
             TokenType::Reserve { reserve_id: ReserveCode::CloseBrace },
             TokenType::Reserve { reserve_id: ReserveCode::CloseBrace },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
             // The array.
-            TokenType::String,
+            TokenType::String { value: "array".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::Colon },
             TokenType::Reserve { reserve_id: ReserveCode::OpenBracket },
             TokenType::Number { value: 1234567890123 },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
             TokenType::Float { value: -12.1 },
             TokenType::Reserve { reserve_id: ReserveCode::Comma },
-            TokenType::String,
+            TokenType::String {value: "S".to_string() },
             TokenType::Reserve { reserve_id: ReserveCode::CloseBracket },
             // End array.
             TokenType::Reserve { reserve_id: ReserveCode::CloseBrace },
@@ -241,5 +298,7 @@ mod tests {
             current_token += 1;
             lexer.next_token(&mut token);
         }
+
+        assert_eq!(current_token, expected_token_types.len());
     }
 }
