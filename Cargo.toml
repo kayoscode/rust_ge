@@ -6,17 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ogl33 = { version = "0.2.0", features = ["debug_error_checks"]}
-imagine = "0.0.5"
 
 [dependencies.glmath]
 path = "./glmath"
-
-[dependencies.window]
-path = "./window"
 
 [dependencies.timer]
 path = "./timer"
 
 [dependencies.serializers]
 path = "./serializers"
+
+[dependencies.core_engine]
+path = "./core_engine"

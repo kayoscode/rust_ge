@@ -216,16 +216,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca0bae1fe9752cf7fd9b0064c674ae63f97b37bc714d745cbde0afb7ec4e6765"
 
 [[package]]
-name = "game_engine"
-version = "0.1.0"
-dependencies = [
- "core_engine",
- "glmath",
- "serializers",
- "timer",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

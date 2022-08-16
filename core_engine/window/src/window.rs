@@ -41,25 +41,26 @@ pub trait WindowControl {
     fn close_window(&mut self);
 
     /// Returns true if the key state if the key is 'down'
-    fn is_key_down(&mut self, key: keyboard_input::Key) -> bool;
+    fn is_key_down(&self, key: keyboard_input::Key) -> bool;
     /// Returns true if the key state is 'pressed'
-    fn is_key_clicked(&mut self, key: keyboard_input::Key) -> bool;
+    fn is_key_clicked(&self, key: keyboard_input::Key) -> bool;
     /// Returns true if the key state is 'up'
-    fn is_key_up(&mut self, key: keyboard_input::Key) -> bool {
+    fn is_key_up(&self, key: keyboard_input::Key) -> bool {
         !self.is_key_down(key)
     }
 
     // Returns true if the mouse button state is 'down'
-    fn is_mouse_down(&mut self, button: mouse_input::MouseButton) -> bool;
+    fn is_mouse_down(&self, button: mouse_input::MouseButton) -> bool;
     // Returns true if the mouse button state is 'pressed'
-    fn is_mouse_clicked(&mut self, button: mouse_input::MouseButton) -> bool;
+    fn is_mouse_clicked(&self, button: mouse_input::MouseButton) -> bool;
     // Returns true if the mouse button state is 'released'
-    fn is_mouse_up(&mut self, button: mouse_input::MouseButton) -> bool {
+    fn is_mouse_up(&self, button: mouse_input::MouseButton) -> bool {
         !self.is_mouse_down(button)
     }
 
     // Returns the amount the mouse has scrolled in the X axis.
-    fn get_mouse_dx(&mut self) -> i32;
+    fn get_mouse_dx(&self) -> i32;
+    fn get_mouse_dy(&self) -> i32;
 }
 
 pub struct GraphicsWindow {
@@ -87,27 +88,48 @@ impl WindowControl for GraphicsWindow {
 
         self.window.swap_buffers();
 
+        // Clear the window.
+        unsafe {
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+
         return self.window.should_close();
     }
 
-    fn is_key_down(&mut self, key: keyboard_input::Key) -> bool {
-        self.keyboard_input.down[key as usize]
+    fn is_key_down(&self, key: keyboard_input::Key) -> bool {
+        return match self.keyboard_input.down.get(key as usize) {
+            Some(val) => *val,
+            None => false
+        }
     }
 
-    fn is_key_clicked(&mut self, key: keyboard_input::Key) -> bool {
-        self.keyboard_input.clicked[key as usize]
+    fn is_key_clicked(&self, key: keyboard_input::Key) -> bool {
+        return match self.keyboard_input.clicked.get(key as usize) {
+            Some(val) => *val,
+            None => false
+        }
     }
 
-    fn is_mouse_down(&mut self, button: mouse_input::MouseButton) -> bool {
-        self.mouse_button_input.down[button as usize]
+    fn is_mouse_down(&self, button: mouse_input::MouseButton) -> bool {
+        return match self.mouse_button_input.down.get(button as usize) {
+            Some(val) => *val,
+            None => false
+        }
     }
 
-    fn is_mouse_clicked(&mut self, button: mouse_input::MouseButton) -> bool {
-        self.mouse_button_input.clicked[button as usize]
+    fn is_mouse_clicked(&self, button: mouse_input::MouseButton) -> bool {
+        return match self.mouse_button_input.clicked.get(button as usize) {
+            Some(val) => *val,
+            None => false
+        }
     }
 
-    fn get_mouse_dx(&mut self) -> i32 {
-        return 0;
+    fn get_mouse_dx(&self) -> i32 {
+        0
+    }
+
+    fn get_mouse_dy(&self) -> i32 {
+        0
     }
 }
 

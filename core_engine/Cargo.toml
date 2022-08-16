@@ -1,0 +1,22 @@
+[package]
+name = "core_engine"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ogl33 = { version = "0.2.0", features = ["debug_error_checks"]}
+image = "0.24.3"
+
+[dependencies.window]
+path = "./window"
+
+[dependencies.serializers]
+path = "../serializers"
+
+[dependencies.timer]
+path = "../timer"
+
+[dependencies.glmath]
+path = "../glmath"

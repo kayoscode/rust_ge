@@ -2,6 +2,7 @@ use std::{fmt::Display, ops::{Add, AddAssign, SubAssign, Sub, MulAssign, Neg}};
 
 use crate::glmath::*;
 
+#[repr(C)]
 #[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub struct Mat33<T: PartialOrd + Copy> {
     pub data: [[T; 3]; 3]
