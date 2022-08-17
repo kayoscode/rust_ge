@@ -48,6 +48,37 @@ impl JsonObject {
     // TODO: create a json string to save to a file.
 }
 
+impl ToString for JsonObject {
+    fn to_string(&self) -> String {
+        if self.sub_nodes.len() == 0 { return "{}". to_string() }
+
+        let mut returned_string = "{".to_string();
+
+        let mut node_ittr = self.sub_nodes.iter();
+        let mut current_itt = node_ittr.next().unwrap();
+
+        loop {
+            returned_string.push_str(current_itt.0);
+            returned_string.push_str(":");
+            returned_string.push_str(current_itt.1.to_string().as_str());
+
+            let next_itt = node_ittr.next();
+
+            match next_itt {
+                None => break,
+                Some(next) => {
+                    returned_string.push_str(",");
+                    current_itt = next;
+                }
+            }
+        }
+
+        returned_string.push_str("}");
+
+        returned_string
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct JsonArray {
     sub_nodes: Vec<JsonNode>
@@ -85,6 +116,35 @@ impl JsonArray {
     }
 }
 
+impl ToString for JsonArray {
+    fn to_string(&self) -> String {
+        if self.sub_nodes.len() == 0 { return "{}". to_string() }
+
+        let mut returned_string = "{".to_string();
+
+        let mut node_ittr = self.sub_nodes.iter();
+        let mut current_itt = node_ittr.next().unwrap();
+
+        loop {
+            returned_string.push_str(current_itt.to_string().as_str());
+
+            let next_itt = node_ittr.next();
+
+            match next_itt {
+                None => break,
+                Some(next) => {
+                    returned_string.push_str(",");
+                    current_itt = next;
+                }
+            }
+        }
+
+        returned_string.push_str("}");
+
+        returned_string
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct JsonValue<T: PartialEq + Clone> {
     value: T
@@ -99,13 +159,19 @@ impl<T: PartialEq + Clone> JsonValue<T> {
 }
 
 
-pub trait JsonValueOps<T: PartialEq + Clone> {
+pub trait JsonValueOps<T: PartialEq + Clone + ToString> {
     fn set(&mut self, value: T);
     fn get_mut(&mut self) -> &mut T;
     fn get(&self) -> &T;
 }
 
-impl<T: PartialEq + Clone> JsonValueOps<T> for JsonValue<T> {
+impl<T: PartialEq + Clone + ToString> ToString for JsonValue<T> {
+    fn to_string(&self) -> String {
+        self.value.to_string()
+    }
+}
+
+impl<T: PartialEq + Clone + ToString> JsonValueOps<T> for JsonValue<T> {
     fn set(&mut self, value: T) {
         self.value = value;
     }
@@ -129,6 +195,20 @@ pub enum JsonNode {
     String(JsonValue<String>),
     #[default]
     Null
+}
+
+impl ToString for JsonNode {
+    fn to_string(&self) -> String {
+        match self {
+            JsonNode::Object(obj) => obj.to_string(),
+            JsonNode::Array(arr) => arr.to_string(),
+            JsonNode::Number(num) => num.to_string(),
+            JsonNode::Float(num) => num.to_string(),
+            JsonNode::Bool(val) => val.to_string(),
+            JsonNode::String(str) => str.to_string(),
+            JsonNode::Null => "null".to_string(),
+        }
+    }
 }
 
 pub fn parse_json(lexer: &mut JsonLexer) -> Option<JsonNode> {
