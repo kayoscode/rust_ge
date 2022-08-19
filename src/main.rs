@@ -1,4 +1,6 @@
 use core_engine::{self, engine::GameManager, shader_program::{ShaderProgram, ShaderUniforms}, mesh::{Mesh2D, DrawableMesh}};
+use glmath::glmath::Vec2f;
+use timer::Stopwatch;
 
 fn main() {
     let game_manager = GameManager::from_conf
@@ -27,17 +29,25 @@ fn main() {
             let location_pos = gui_shader.get_uniform_location("pos");
             let location_scale = gui_shader.get_uniform_location("scale");
 
+            let scale = Vec2f::new(0.5, 0.5);
+
             gui_shader.load_vec2(location_pos, glmath::glmath::Vec2f::new(0.0, 0.0));
-            gui_shader.load_vec2(location_scale, glmath::glmath::Vec2f::new(0.5, 0.5));
+            gui_shader.load_vec2(location_scale, scale);
 
+            let mut frame_timer: Stopwatch = Stopwatch::new();
+
+            let mut frame_count = 0;
             while !game_window.update_window() {
-                if game_window.is_key_clicked(core_engine::Key::Escape) {
-                    game_window.close_window();
-                }
-
                 mesh.render();
+                frame_count += 1;
+
+                if frame_timer.elapsed_seconds() > 1.0 {
+                    frame_timer.start();
+                    println!("{}", frame_count);
+                    frame_count = 0;
+                }
             }
-        }
+        },
         None => {
             println!("Failed to load app config.");
         }
