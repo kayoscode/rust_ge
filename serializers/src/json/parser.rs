@@ -58,7 +58,9 @@ impl ToString for JsonObject {
         let mut current_itt = node_ittr.next().unwrap();
 
         loop {
+            returned_string.push_str("\"");
             returned_string.push_str(current_itt.0);
+            returned_string.push_str("\"");
             returned_string.push_str(":");
             returned_string.push_str(current_itt.1.to_string().as_str());
 
@@ -118,9 +120,9 @@ impl JsonArray {
 
 impl ToString for JsonArray {
     fn to_string(&self) -> String {
-        if self.sub_nodes.len() == 0 { return "{}". to_string() }
+        if self.sub_nodes.len() == 0 { return "[]". to_string() }
 
-        let mut returned_string = "{".to_string();
+        let mut returned_string = "[".to_string();
 
         let mut node_ittr = self.sub_nodes.iter();
         let mut current_itt = node_ittr.next().unwrap();
@@ -139,7 +141,7 @@ impl ToString for JsonArray {
             }
         }
 
-        returned_string.push_str("}");
+        returned_string.push_str("]");
 
         returned_string
     }
@@ -205,7 +207,12 @@ impl ToString for JsonNode {
             JsonNode::Number(num) => num.to_string(),
             JsonNode::Float(num) => num.to_string(),
             JsonNode::Bool(val) => val.to_string(),
-            JsonNode::String(str) => str.to_string(),
+            JsonNode::String(str) => {
+                let mut as_string = "\"".to_string();
+                as_string.push_str(str.to_string().as_str());
+                as_string.push_str("\"");
+                as_string
+            },
             JsonNode::Null => "null".to_string(),
         }
     }

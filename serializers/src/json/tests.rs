@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use crate::json::{lexer::*, self, parser::{JsonNode, JsonValueOps, JsonArray, JsonValue, JsonObject}};
+    use crate::json::{lexer::{*}, self, parser::{JsonNode, JsonValueOps, JsonArray, JsonValue, JsonObject, parse_json}};
 
     const HAPPY_TEST: &str = r#"{
         "glossary": {
@@ -234,8 +234,44 @@ mod tests {
     }
 
     #[test]
+    fn test_json_to_string() {
+        // Load the happy test and see if we parse it correctly.
+        let mut expected_object = JsonObject::default();
+        let mut glossary_object = JsonObject::default();
+        let mut glossary_div_object = JsonObject::default();
+
+        glossary_object.add("title", JsonNode::String(JsonValue::<String>::new("example glossary".to_string())));
+        glossary_div_object.add("title", JsonNode::String(JsonValue::<String>::new("S".to_string())));
+        glossary_div_object.add("count", JsonNode::Float(JsonValue::<f64>::new(5.123)));
+        glossary_div_object.add("hours", JsonNode::Number(JsonValue::<i64>::new(-1)));
+        glossary_div_object.add("is_true", JsonNode::Bool(JsonValue::<bool>::new(false)));
+        glossary_div_object.add("test_null", JsonNode::Null);
+        glossary_object.add("GlossDiv", JsonNode::Object(glossary_div_object));
+        expected_object.add("glossary", JsonNode::Object(glossary_object));
+
+        let mut expected_array = JsonArray::default();
+        expected_array.add(JsonNode::Number(JsonValue::<i64>::new(1234567890123)));
+        expected_array.add(JsonNode::Float(JsonValue::<f64>::new(-12.1)));
+        expected_array.add(JsonNode::String(JsonValue::<String>::new("S".to_string())));
+        expected_object.add("array", JsonNode::Array(expected_array));
+
+        let string = expected_object.to_string();
+
+        // Reparse the string to json, and see if it matches the source.
+        let mut lexer = JsonLexer::from_raw_json(string.as_str()).unwrap();
+        let loaded_json = parse_json(&mut lexer);
+
+        match loaded_json {
+            Some(JsonNode::Object(json_object)) => {
+                assert!(json_object.eq(&expected_object))
+            },
+            _ => assert!(false)
+        }
+    }
+
     // Load a json file from the system and see if we get the right
     // Token stream.
+    #[test]
     fn test_happy_lexer() {
         let mut lexer = JsonLexer::from_raw_json(HAPPY_TEST).unwrap();
 
