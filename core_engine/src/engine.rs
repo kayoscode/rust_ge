@@ -1,5 +1,5 @@
 use crate::render_pipeline::RenderPipelineHandler;
-use crate::resource_manager::{ResourceManager};
+use crate::resource_manager::{ResourceManager, ResourceDestroy};
 use crate::texture::{Texture};
 use crate::mesh::{Mesh2D};
 use crate::shader_program::{ShaderProgram};
@@ -26,32 +26,43 @@ pub trait ResourceLoader {
 pub struct Framebuffer {
 }
 
+impl ResourceDestroy for Framebuffer {
+    fn destroy(&mut self) {
+    }
+}
+
 /// Stores information loaded by the engine.
 /// This may be sourced from the config files, or from a resource loader object.
 /// Either way, all these objects can be globally accessed across the engine.
 /// More resources can be loaded dynamically by calling the load resources method again with a separate resource loader.
-#[derive(Default)]
 pub struct GameResources {
-    texture_resources: ResourceManager<Texture>,
-    shader_resouces: ResourceManager<ShaderProgram>,
-    mesh_resources: ResourceManager<Mesh2D>,
-    framebuffer_resources: ResourceManager<Framebuffer>,
+    pub texture_resources: ResourceManager<Texture>,
+    pub shader_resouces: ResourceManager<ShaderProgram>,
+    pub mesh_resources: ResourceManager<Mesh2D>,
+    pub framebuffer_resources: ResourceManager<Framebuffer>,
 
     /// Holds the path from which the resource files should be loaded.
     res_path: String
 }
 
+impl Default for GameResources {
+    fn default() -> Self {
+        GameResources { 
+            texture_resources: ResourceManager::new("Textures"), 
+            shader_resouces: ResourceManager::new("Shaders"), 
+            mesh_resources: ResourceManager::new("Meshes"),
+            framebuffer_resources: ResourceManager::new("Framebuffers"), 
+            res_path: String::from("")
+        }
+    }
+}
+
 pub struct GameManager {
-    /// Times exactly how long a frame took.
-    /// For now, all we need is a render timer, if we choose to create an 
-    /// update thread, we will need an update_timer as well.
-    pub render_timer: Stopwatch,
-
-    /// Holds the global game resources loaded by the implementation.
-    resources: GameResources,
-
     /// Holds a render pipeline object.
     render_pipelines: Vec<Box<dyn RenderPipelineHandler>>,
+
+    /// Holds the global game resources loaded by the implementation.
+    pub resources: GameResources,
 
     /// The currently active render pipeline.
     active_pipeline: Option<usize>,
@@ -60,6 +71,9 @@ pub struct GameManager {
     /// Note: the window is at the bottom of the list of members because Drop should be called last.
     /// Not doing so will result in invalid opengl calls.
     window: Box<dyn WindowControl>,
+
+    /// Holds a controller for the keyboard and mouse input.
+    input: Box<dyn MouseKeyboardInputControl> 
 }
 
 impl GameManager {
@@ -68,11 +82,11 @@ impl GameManager {
         let window = window::window::GraphicsWindow::new(&window_conf);
 
         Some(GameManager {
-            render_timer: Stopwatch::new(),
             window: Box::new(window),
             resources: GameResources::default(),
             render_pipelines: Vec::<Box<dyn RenderPipelineHandler>>::default(),
-            active_pipeline: None
+            active_pipeline: None,
+            input: Box::new(MouseKeyboardInput::new())
         })
     }
 
@@ -149,8 +163,8 @@ impl GameManager {
         }
     }
 
-    pub fn init(&self) {
-        for pipeline in &self.render_pipelines {
+    pub fn init(&mut self) {
+        for pipeline in self.render_pipelines.iter_mut() {
             pipeline.init();
         }
     }
@@ -161,12 +175,20 @@ impl GameManager {
     
     pub fn update(&mut self) -> bool {
         let should_close = self.window.update_window();
+        self.input.update_input();
 
         match self.active_pipeline {
             Some(active) => {
-                let test = &self.render_pipelines[active];
-                test.prepare();
-                test.render();
+                let render_pipeline = self.render_pipelines.get_mut(active);
+
+                match render_pipeline {
+                    Some(render_pipeline) => {
+                        render_pipeline.update(&self.input, 0.0);
+                        render_pipeline.prepare();
+                        render_pipeline.render();
+                    },
+                    _ => {}
+                }
             },
             None => {}
         }

@@ -8,6 +8,7 @@ use crate::mouse_input;
 const NUM_KEYS_INPUT: usize = 500;
 const NUM_MOUSE_BUTTONS: usize = 8;
 
+#[derive(Default, Clone)]
 struct ButtonInputState {
     down: Vec<bool>,
     clicked: Vec<bool>
@@ -40,6 +41,13 @@ pub trait WindowControl {
     /// Sends a message to close the window to the client.
     fn close_window(&mut self);
 
+    fn set_vsync(&self, vsync: bool);
+}
+
+pub trait MouseKeyboardInputControl {
+    /// Updates the state of input.
+    fn update_input(&mut self);
+
     /// Returns true if the key state if the key is 'down'
     fn is_key_down(&self, key: keyboard_input::Key) -> bool;
     /// Returns true if the key state is 'pressed'
@@ -61,25 +69,35 @@ pub trait WindowControl {
     // Returns the amount the mouse has scrolled in the X axis.
     fn get_mouse_dx(&self) -> i32;
     fn get_mouse_dy(&self) -> i32;
-
-    fn set_vsync(&self, vsync: bool);
 }
 
 pub struct GraphicsWindow {
-    window: Window,
+    window: Window
+}
+
+#[derive(Default, Clone)]
+pub struct MouseKeyboardInput {
     keyboard_input: ButtonInputState,
     mouse_button_input: ButtonInputState
 }
 
-impl WindowControl for GraphicsWindow {
-    fn close_window(&mut self) {
-        self.window.set_should_close(true);
+impl MouseKeyboardInput {
+    pub fn new() -> Self {
+        MouseKeyboardInput {
+            keyboard_input: ButtonInputState {
+                down: vec![false; NUM_KEYS_INPUT],
+                clicked: vec![false; NUM_KEYS_INPUT]
+            },
+            mouse_button_input: ButtonInputState { 
+                down: vec![false; NUM_MOUSE_BUTTONS],
+                clicked: vec![false; NUM_MOUSE_BUTTONS]
+            }
+        }
     }
+}
 
-    fn update_window(&mut self) -> bool {
-        // Update input state.
-        self.window.glfw.poll_events();
-
+impl MouseKeyboardInputControl for MouseKeyboardInput {
+    fn update_input(&mut self) {
         unsafe {
             self.keyboard_input.update(&mut keyboard_input::KEY_INPUTS.keys_pressed_frame, 
                 &mut keyboard_input::KEY_INPUTS.keys_released_frame);
@@ -87,15 +105,6 @@ impl WindowControl for GraphicsWindow {
             self.mouse_button_input.update(&mut mouse_input::MOUSE_BUTTON_INPUTS.buttons_pressed_frame, 
                 &mut mouse_input::MOUSE_BUTTON_INPUTS.buttons_released_frame);
         }
-
-        self.window.swap_buffers();
-
-        // Clear the window.
-        unsafe {
-            glClear(GL_COLOR_BUFFER_BIT);
-        }
-
-        return self.window.should_close();
     }
 
     fn is_key_down(&self, key: keyboard_input::Key) -> bool {
@@ -132,6 +141,27 @@ impl WindowControl for GraphicsWindow {
 
     fn get_mouse_dy(&self) -> i32 {
         0
+    }
+
+}
+
+impl WindowControl for GraphicsWindow {
+    fn close_window(&mut self) {
+        self.window.set_should_close(true);
+    }
+
+    fn update_window(&mut self) -> bool {
+        // Update input state.
+        self.window.glfw.poll_events();
+
+        self.window.swap_buffers();
+
+        // Clear the window.
+        unsafe {
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+
+        return self.window.should_close();
     }
 
     fn set_vsync(&self, vsync: bool) {
@@ -225,15 +255,7 @@ impl GraphicsWindow {
         }
 
         GraphicsWindow {
-            window,
-            keyboard_input: ButtonInputState {
-                down: vec![false; NUM_KEYS_INPUT],
-                clicked: vec![false; NUM_KEYS_INPUT]
-            },
-            mouse_button_input: ButtonInputState { 
-                down: vec![false; NUM_MOUSE_BUTTONS],
-                clicked: vec![false; NUM_MOUSE_BUTTONS]
-            }
+            window
         }
     }
 }

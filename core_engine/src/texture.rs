@@ -1,7 +1,9 @@
 use image::GenericImageView;
 use ogl33::*;
 
-#[derive(Default)]
+use crate::resource_manager::ResourceDestroy;
+
+#[derive(Default, Clone)]
 pub struct Texture {
     diffuse_id: GLuint
 }
@@ -53,9 +55,8 @@ impl Texture {
     }
 }
 
-/// Implement drop to make sure we free the texture's memory when were done with it.
-impl Drop for Texture {
-    fn drop(&mut self) {
+impl ResourceDestroy for Texture {
+    fn destroy(&mut self) {
         unsafe {
             glDeleteTextures(1, &self.diffuse_id);
         }

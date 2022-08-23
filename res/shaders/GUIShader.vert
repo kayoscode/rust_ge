@@ -7,7 +7,7 @@ uniform vec2 scale;
 out vec2 texCoord;
 
 void main() {
-    gl_Position = vec4(position.x * scale.x, position.y * scale.y, 0, 1);
+    gl_Position = vec4((position.x * scale.x) + pos.x, (position.y * scale.y) + pos.y, 0, 1);
 
     texCoord = position * .5 + .5;
 	texCoord.y = -texCoord.y;

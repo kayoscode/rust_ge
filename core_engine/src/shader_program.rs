@@ -4,6 +4,8 @@ use ::glmath::glmath::Vec2f;
 use glmath::glmath::{Vec3f, Vec4f, Mat22f, Mat33f, Mat44f};
 use ogl33::*;
 
+use crate::resource_manager::ResourceDestroy;
+
 #[repr(u32)]
 #[derive(Default, PartialEq, PartialOrd)]
 pub enum ShaderType {
@@ -59,7 +61,7 @@ impl Drop for Shader {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 /// Holds the entire shader program. Stores the sub-shaders as dependents 
 /// so they aren't dropped too early.
 pub struct ShaderProgram {
@@ -131,9 +133,8 @@ impl ShaderProgram {
     }
 }
 
-/// Make sure to free the shader from graphics memory before destroying the object.
-impl Drop for ShaderProgram {
-    fn drop(&mut self) {
+impl ResourceDestroy for ShaderProgram {
+    fn destroy(&mut self) {
         unsafe {
             glDeleteProgram(self.program_id);
         }

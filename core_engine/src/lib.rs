@@ -5,5 +5,6 @@ pub mod engine;
 pub mod resource_manager;
 pub mod render_pipeline;
 
+pub use window::window::*;
 pub use window::Key;
 pub use window::MouseButton;

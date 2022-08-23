@@ -16,10 +16,10 @@
 	},
 	"resources": {
 		"textures": {
-			"background_texture": "./textures/snake_bg.png"
+			"tex_background": "./textures/snake_bg.png"
 		},
 		"shaders": {
-			"game_shader": {
+			"shader_game": {
 				"vertex": "./shaders/GUIShader.vert",
 				"fragment": "./shaders/GUIShader.frag"
 			}

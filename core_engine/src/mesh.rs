@@ -2,6 +2,8 @@ use std::mem::size_of;
 
 use ogl33::*;
 
+use crate::resource_manager::ResourceDestroy;
+
 #[derive(Default)]
 pub struct Mesh2D {
     draw_count: i32,
@@ -74,8 +76,8 @@ impl Mesh2D {
     }
 }
 
-impl Drop for Mesh2D {
-    fn drop(&mut self) {
+impl ResourceDestroy for Mesh2D {
+    fn destroy(&mut self) {
         unsafe {
             // Free the vao and vbos.
             glBindVertexArray(self.vao);
