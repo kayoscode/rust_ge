@@ -7,6 +7,10 @@ pub struct Texture {
 }
 
 impl Texture {
+    pub fn texture_id(&self) -> u32 {
+        return self.diffuse_id;
+    }
+
     /// Loads the texture from a file.
     pub fn open(texture_path: &str) -> Result<Self, image::ImageError> {
         let img = image::open(texture_path);

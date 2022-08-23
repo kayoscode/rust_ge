@@ -1,6 +1,6 @@
 extern crate glfw;
 
-use glfw::{Context, ffi::{glfwGetProcAddress, glfwSetKeyCallback, glfwSetMouseButtonCallback}, Window};
+use glfw::{Context, ffi::{glfwGetProcAddress, glfwSetKeyCallback, glfwSetMouseButtonCallback, glfwMakeContextCurrent, glfwSwapInterval, glfwWindowHint, RESIZABLE}, Window};
 use ogl33::*;
 
 use crate::keyboard_input;
@@ -61,6 +61,8 @@ pub trait WindowControl {
     // Returns the amount the mouse has scrolled in the X axis.
     fn get_mouse_dx(&self) -> i32;
     fn get_mouse_dy(&self) -> i32;
+
+    fn set_vsync(&self, vsync: bool);
 }
 
 pub struct GraphicsWindow {
@@ -131,6 +133,19 @@ impl WindowControl for GraphicsWindow {
     fn get_mouse_dy(&self) -> i32 {
         0
     }
+
+    fn set_vsync(&self, vsync: bool) {
+        unsafe {
+            glfwMakeContextCurrent(self.window.window_ptr());
+
+            if vsync {
+                glfwSwapInterval(1);
+            }
+            else {
+                glfwSwapInterval(0);
+            }
+        }
+    }
 }
 
 fn load_gl_functions() {
@@ -140,13 +155,49 @@ fn load_gl_functions() {
     }
 }
 
+#[derive(Default, Clone, Copy)]
+pub struct WindowClearColor {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32
+}
+
+#[derive(Clone)]
+pub struct GameConfig {
+    pub xres: u32,
+    pub yres: u32,
+    pub clear_color: WindowClearColor,
+    pub title: String,
+    pub vsync: bool,
+    pub resizable: bool,
+}
+
+impl Default for GameConfig {
+    fn default() -> Self {
+        GameConfig { 
+            xres: 1920, 
+            yres: 1080, 
+            title: "Game Title".to_string(),
+            clear_color: WindowClearColor::default(),
+            vsync: true,
+            resizable: true,
+        }
+    }
+}
+
+
 impl GraphicsWindow {
-    pub fn new(width: u32, height: u32, title: &str) -> GraphicsWindow {
+    pub fn new(config: &GameConfig) -> GraphicsWindow {
         let glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
+        // Set window parameters.
+        unsafe {
+            glfwWindowHint(RESIZABLE, 0);
+        }
+
         let (mut window, _events) = glfw
-            .create_window(width, height, title, glfw::WindowMode::Windowed)
-            .expect("Failed to create GLFW window.");
+            .create_window(config.xres, config.yres, &config.title, glfw::WindowMode::Windowed)
+            .expect("Failed to create window.");
 
         window.set_key_polling(true);
         window.make_current();
@@ -161,6 +212,16 @@ impl GraphicsWindow {
 
             let mouse_cb: Option<glfw::ffi::GLFWmousebuttonfun> = Some(mouse_input::mouse_callback);
             glfwSetMouseButtonCallback(window.window_ptr(), mouse_cb);
+        }
+
+        // Set the window to behave as specified in the config:
+        unsafe {
+            match config.vsync {
+                true => glfwSwapInterval(1),
+                false => glfwSwapInterval(0)
+            }
+
+            glClearColor(config.clear_color.r, config.clear_color.g, config.clear_color.b, 1.0);
         }
 
         GraphicsWindow {

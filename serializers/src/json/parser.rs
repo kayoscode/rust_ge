@@ -45,7 +45,13 @@ impl JsonObject {
         self.sub_nodes.keys()
     }
 
-    // TODO: create a json string to save to a file.
+    pub fn iter(&self) -> std::collections::hash_map::Iter<String, JsonNode> {
+        self.sub_nodes.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<String, JsonNode> {
+        self.sub_nodes.iter_mut()
+    }
 }
 
 impl ToString for JsonObject {
@@ -115,6 +121,14 @@ impl JsonArray {
 
     pub fn size(&self) -> usize {
         self.sub_nodes.len()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<JsonNode> {
+        self.sub_nodes.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<JsonNode> {
+        self.sub_nodes.iter_mut()
     }
 }
 

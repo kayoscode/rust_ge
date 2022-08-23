@@ -1,18 +1,28 @@
 {
     "window_config": {
-        "xres": 1920,
-        "yres": 1080,
-        "xpos": "center",
-        "ypos": "center",
-        "title": "Pokemon",
+        "xres": 1000,
+        "yres": 1000,
+		"resizable": false,
         "fullscreen": false,
-		"vsync": true
+		"title": "Snake"
     },
 	"graphics": {
 		"clear_color": {
 			"r": 0.0,
 			"g": 1.0,
-			"b": 1.0
+			"b": 0.0
+		},
+		"vsync": true
+	},
+	"resources": {
+		"textures": {
+			"background_texture": "./textures/snake_bg.png"
+		},
+		"shaders": {
+			"game_shader": {
+				"vertex": "./shaders/GUIShader.vert",
+				"fragment": "./shaders/GUIShader.frag"
+			}
 		}
 	}
 }
