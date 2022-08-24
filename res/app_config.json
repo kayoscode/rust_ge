@@ -26,6 +26,6 @@
 		}
 	},
 	"game": {
-		"update_tick_rate": 20
+		"update_tick_rate": 60
 	}
 }
