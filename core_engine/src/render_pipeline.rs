@@ -11,6 +11,6 @@ pub trait RenderPipelineHandler {
 
     fn init(&mut self);
     fn prepare(&self);
-    fn update(&mut self, input: &Box<dyn MouseKeyboardInputControl>, delta: f32);
+    fn update(&mut self, input: &Box<dyn MouseKeyboardInputControl>);
     fn execute(&self);
 }

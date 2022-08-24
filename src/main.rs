@@ -1,6 +1,5 @@
 use core_engine::{self, engine::GameManager, shader_program::{ShaderProgram, ShaderUniforms}, mesh::{Mesh2D, DrawableMesh}, texture::Texture, MouseKeyboardInputControl};
 use glmath::glmath::Vec2f;
-use timer::Stopwatch;
 use core_engine::render_pipeline::*;
 
 struct SnakeRenderPipeline {
@@ -62,24 +61,21 @@ impl RenderPipelineHandler for SnakeRenderPipeline {
         self.background_mesh.render();
     }
 
-    /// TODO: eventually this has to move to a scene controller type.
-    /// TODO: allow setting of update tick speed.
-    /// TODO: create delta.
-    fn update(&mut self, input: &Box<dyn MouseKeyboardInputControl>, _delta: f32) {
-        if input.is_key_down(core_engine::Key::W) {
+    fn update(&mut self, input: &Box<dyn MouseKeyboardInputControl>) {
+        if input.is_key_down(core_engine::Key::W) || input.is_key_clicked(core_engine::Key::W){
             self.movement_direction = Vec2f::new(0.0, 1.0);
         }
-        else if input.is_key_down(core_engine::Key::S) {
+        else if input.is_key_down(core_engine::Key::S) || input.is_key_clicked(core_engine::Key::S){
             self.movement_direction = Vec2f::new(0.0, -1.0);
         }
-        else if input.is_key_down(core_engine::Key::A) {
+        else if input.is_key_down(core_engine::Key::A) || input.is_key_clicked(core_engine::Key::A){
             self.movement_direction = Vec2f::new(-1.0, 0.0);
         }
-        else if input.is_key_down(core_engine::Key::D) {
+        else if input.is_key_down(core_engine::Key::D) || input.is_key_clicked(core_engine::Key::D){
             self.movement_direction = Vec2f::new(1.0, 0.0);
         }
 
-        self.pos += self.movement_direction * 0.003;
+        self.pos += self.movement_direction * 0.04;
     }
 }
 
@@ -95,17 +91,7 @@ fn main() {
             game_manager.add_render_pipeline(Box::new(pipeline));
             game_manager.init();
 
-            let mut frame_timer: Stopwatch = Stopwatch::new();
-            let mut frame_count = 0;
-
             while !game_manager.update() {
-                frame_count += 1;
-
-                if frame_timer.elapsed_seconds() > 1.0 {
-                    frame_timer.start();
-                    println!("{}", frame_count);
-                    frame_count = 0;
-                }
             }
         },
         None => {

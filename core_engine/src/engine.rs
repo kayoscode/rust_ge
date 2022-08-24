@@ -4,7 +4,7 @@ use crate::texture::{Texture};
 use crate::mesh::{Mesh2D};
 use crate::shader_program::{ShaderProgram};
 
-use ogl33::glClearColor;
+use ogl33::{glClearColor};
 // External dependencies.
 use timer::Stopwatch;
 use window::window::*;
@@ -57,6 +57,55 @@ impl Default for GameResources {
     }
 }
 
+pub struct GameTick {
+    /// The number of times per second the game state updates.
+    /// 0 indicates no limits.
+    update_tick_time: f64,
+    current_tick_time: f64,
+    timer: Stopwatch
+}
+
+impl GameTick {
+    pub fn new(tick_rate: i32) -> Self {
+        let mut actual_tick_time = 0.0;
+        if tick_rate != 0 {
+            actual_tick_time = 1.0 / tick_rate as f64;
+        }
+
+        Self { 
+            update_tick_time: actual_tick_time,
+            current_tick_time: 0.0,
+            timer: Stopwatch::new()
+        }
+    }
+
+    /// Ticks the game loop and returns the number of updates which should take place.
+    pub fn tick(&mut self) -> i32 {
+        if self.update_tick_time == 0.0 {
+            return 1;
+        }
+
+        if self.timer.elapsed_seconds() + self.current_tick_time >= self.update_tick_time {
+            let total_time = self.timer.elapsed_seconds() + self.current_tick_time;
+            self.timer.start();
+
+            let update_count = (total_time / self.update_tick_time) as i32;
+            let update_remainder = total_time - (update_count as f64 * self.update_tick_time) as f64;
+
+            // Make sure this is always less than the update tick time.
+            // If it's not, something's seriously wrong.
+            #[cfg(debug_assertions)]
+            assert!(update_remainder < self.update_tick_time);
+
+            self.current_tick_time = update_remainder;
+
+            return update_count
+        }
+
+        0
+    }
+}
+
 pub struct GameManager {
     /// Holds a render pipeline object.
     render_pipelines: Vec<Box<dyn RenderPipelineHandler>>,
@@ -73,12 +122,15 @@ pub struct GameManager {
     window: Box<dyn WindowControl>,
 
     /// Holds a controller for the keyboard and mouse input.
-    input: Box<dyn MouseKeyboardInputControl> 
+    input: Box<dyn MouseKeyboardInputControl>,
+
+    /// The time at which the game should tick.
+    game_tick: GameTick
 }
 
 impl GameManager {
     /// Creates a new game manager from self defined settings.
-    pub fn new(window_conf: GameConfig) -> Option<Self> {
+    pub fn new(window_conf: WindowConfig) -> Option<Self> {
         let window = window::window::GraphicsWindow::new(&window_conf);
 
         Some(GameManager {
@@ -86,8 +138,15 @@ impl GameManager {
             resources: GameResources::default(),
             render_pipelines: Vec::<Box<dyn RenderPipelineHandler>>::default(),
             active_pipeline: None,
-            input: Box::new(MouseKeyboardInput::new())
+            input: Box::new(MouseKeyboardInput::new()),
+            game_tick: GameTick::new(0)
         })
+    }
+
+    /// Sets the tick rate of the update loop.
+    /// Zero for no limits.
+    pub fn set_update_tick_rate(&mut self, tick_rate: i32) {
+        self.game_tick = GameTick::new(tick_rate);
     }
 
     /// Loads global game resources from the implementation.
@@ -109,7 +168,7 @@ impl GameManager {
                 let user_config = parse_json(&mut json_lexer);
 
                 if let Some(user_config) = user_config {
-                    let config = load_user_config(&user_config);
+                    let config = load_window_config(&user_config);
                     let engine = Self::new(config);
 
                     // Load game resources.
@@ -118,7 +177,9 @@ impl GameManager {
                             game_manager.resources.res_path = res_path.to_string();
 
                             // Load data from the "resources" object into the resource manager.
-                            parse_config_resources(&user_config, &mut game_manager.resources);
+                            load_config_resources(&user_config, &mut game_manager.resources);
+                            let game_config = load_game_config(&user_config);
+                            game_manager.game_tick = GameTick::new(game_config.update_tick_rate);
                             return Some(game_manager);
                         }
                         None => return None
@@ -175,7 +236,6 @@ impl GameManager {
     
     pub fn update(&mut self) -> bool {
         let should_close = self.window.update_window();
-        self.input.update_input();
 
         match self.active_pipeline {
             Some(active) => {
@@ -183,7 +243,14 @@ impl GameManager {
 
                 match render_pipeline {
                     Some(render_pipeline) => {
-                        render_pipeline.update(&self.input, 0.0);
+                        let mut update_count = self.game_tick.tick();
+
+                        while update_count > 0 {
+                            self.input.update_input();
+                            render_pipeline.update(&self.input);
+                            update_count -= 1;
+                        }
+
                         render_pipeline.prepare();
                         render_pipeline.render();
                     },
@@ -197,8 +264,37 @@ impl GameManager {
     }
 }
 
+#[derive(Default, Clone, Copy)]
+struct GameConfig {
+    update_tick_rate: i32
+}
+
+/// Loads data about the game config.
+fn load_game_config(game_config: &JsonNode) -> GameConfig {
+    let mut loaded_game_config = GameConfig::default();
+
+    match game_config {
+        JsonNode::Object(entire_object) => {
+            match entire_object.get("game") {
+                Some(JsonNode::Object(game_object)) => {
+                    match game_object.get("update_tick_rate") {
+                        Some(JsonNode::Number(update_tick_rate)) => {
+                            loaded_game_config.update_tick_rate = *update_tick_rate.get() as i32;
+                        },
+                        _ => {}
+                    }
+                },
+                _ => {}
+            }
+        },
+        _ => {}
+    }
+
+    loaded_game_config
+}
+
 /// Parses resources from the config file into named game resources.
-fn parse_config_resources(user_config: &JsonNode, game_resources: &mut GameResources) {
+fn load_config_resources(user_config: &JsonNode, game_resources: &mut GameResources) {
     match user_config {
         JsonNode::Object(entire_object) => {
             match entire_object.get("resources") {
@@ -302,8 +398,8 @@ fn load_shaders(shaders_object: &JsonObject, shader_resources: &mut ResourceMana
 /// required: ex(true) -> simply tells the system whether the setting must be included in the file.
 /// default_value: ex(1920)
 /// ^^ TODO
-fn load_user_config(user_config: &JsonNode) -> GameConfig {
-    let mut config = GameConfig::default();
+fn load_window_config(user_config: &JsonNode) -> WindowConfig {
+    let mut config = WindowConfig::default();
 
     match user_config {
         // At the base layer, we expect to see just an object.

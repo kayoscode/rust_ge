@@ -193,7 +193,7 @@ pub struct WindowClearColor {
 }
 
 #[derive(Clone)]
-pub struct GameConfig {
+pub struct WindowConfig {
     pub xres: u32,
     pub yres: u32,
     pub clear_color: WindowClearColor,
@@ -202,9 +202,9 @@ pub struct GameConfig {
     pub resizable: bool,
 }
 
-impl Default for GameConfig {
+impl Default for WindowConfig {
     fn default() -> Self {
-        GameConfig { 
+        WindowConfig { 
             xres: 1920, 
             yres: 1080, 
             title: "Game Title".to_string(),
@@ -217,7 +217,7 @@ impl Default for GameConfig {
 
 
 impl GraphicsWindow {
-    pub fn new(config: &GameConfig) -> GraphicsWindow {
+    pub fn new(config: &WindowConfig) -> GraphicsWindow {
         let glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
         // Set window parameters.

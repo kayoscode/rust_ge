@@ -24,5 +24,8 @@
 				"fragment": "./shaders/GUIShader.frag"
 			}
 		}
+	},
+	"game": {
+		"update_tick_rate": 20
 	}
 }
