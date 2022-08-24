@@ -13,6 +13,14 @@ impl Texture {
         return self.diffuse_id;
     }
 
+    /// Binds the texture to a specified index.
+    pub fn bind(&self, index: i32) {
+        unsafe {
+            glActiveTexture(GL_TEXTURE0 + index as GLuint);
+            glBindTexture(GL_TEXTURE_2D, self.diffuse_id);
+        }
+    }
+
     /// Loads the texture from a file.
     pub fn open(texture_path: &str) -> Result<Self, image::ImageError> {
         let img = image::open(texture_path);
@@ -44,9 +52,10 @@ impl Texture {
                     }
 
                     glGenerateMipmap(GL_TEXTURE_2D);
+                    glBindTexture(GL_TEXTURE_2D, 0);
 
                     Ok(Texture {
-                        diffuse_id: 0 
+                        diffuse_id: texture 
                     })
                 }
             },

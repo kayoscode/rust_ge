@@ -6,7 +6,9 @@ use rand::Rng;
 struct SnakeRenderPipeline {
     background_mesh: Mesh2D,
     gui_shader: ShaderProgram,
-    bg_texture: Texture,
+    body_texture: Texture,
+    head_texture: Texture,
+    food_texture: Texture,
     pos: Vec<Vec2f>,
     tile_size: f32,
     movement_direction: Vec2f,
@@ -35,12 +37,17 @@ impl SnakeRenderPipeline {
         mesh.add_float_buffer(vertices, 2);
 
         let gui_shader = game_manager.resources.shader_resouces.get_registry("shader_game").unwrap().clone();
-        let bg_texture = game_manager.resources.texture_resources.get_registry("tex_background").unwrap().clone();
+
+        let body_texture = game_manager.resources.texture_resources.get_registry("tex_snake_body").unwrap().clone();
+        let head_texture = game_manager.resources.texture_resources.get_registry("tex_snake_head").unwrap().clone();
+        let food_texture = game_manager.resources.texture_resources.get_registry("tex_snake_food").unwrap().clone();
 
         SnakeRenderPipeline { 
             background_mesh: mesh,
             gui_shader,
-            bg_texture,
+            body_texture,
+            head_texture,
+            food_texture,
             tile_size: 0.08,
             pos: vec![Vec2f::new(0.0, 0.0)],
             movement_direction: Vec2f::new(0.0, 1.0),
@@ -128,7 +135,7 @@ impl RenderPipelineHandler for SnakeRenderPipeline {
         let location_gui_texture = self.gui_shader.get_uniform_location("guiTexture");
 
         self.gui_shader.load_vec2(location_scale, glmath::glmath::Vec2f::new(self.tile_size / 2.0, self.tile_size / 2.0));
-        self.gui_shader.load_int(location_gui_texture, self.bg_texture.texture_id() as i32);
+        self.gui_shader.load_int(location_gui_texture, 0);
     }
 
     fn prepare(&self) {
@@ -136,13 +143,19 @@ impl RenderPipelineHandler for SnakeRenderPipeline {
     }
 
     fn execute(&self) {
-        // Render each snake segment.
-        for segment in self.pos.iter() {
-            self.gui_shader.load_vec2(self.location_pos, *segment);
+        // Render the snake head.
+        self.head_texture.bind(0);
+        self.gui_shader.load_vec2(self.location_pos, self.pos[0]);
+        self.background_mesh.render();
+
+        for i in 1..self.pos.len() {
+            self.body_texture.bind(0);
+            self.gui_shader.load_vec2(self.location_pos, self.pos[i]);
             self.background_mesh.render();
         }
 
         // Render the target segment.
+        self.food_texture.bind(0);
         match self.next_segment_pos {
             Some(segment_pos) => {
                 self.gui_shader.load_vec2(self.location_pos, segment_pos);

@@ -16,7 +16,9 @@
 	},
 	"resources": {
 		"textures": {
-			"tex_background": "./textures/snake_bg.png"
+			"tex_snake_body": "./textures/snake_bg.png",
+			"tex_snake_head": "./textures/snake_head.png",
+			"tex_snake_food": "./textures/snake_food.png"
 		},
 		"shaders": {
 			"shader_game": {
