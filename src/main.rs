@@ -10,6 +10,8 @@ struct SnakeRenderPipeline {
     pos: Vec<Vec2f>,
     tile_size: f32,
     movement_direction: Vec2f,
+    // The last movement direction is set once the movement direction changes from the x to y axis or vice versa. It is cleared once it's consumed.
+    last_movement_direction: Vec2f,
     location_pos: i32,
     speed: i32,
     update_count: i32,
@@ -42,6 +44,7 @@ impl SnakeRenderPipeline {
             tile_size: 0.08,
             pos: vec![Vec2f::new(0.0, 0.0)],
             movement_direction: Vec2f::new(0.0, 1.0),
+            last_movement_direction: Vec2f::new(0.0, 0.0),
             location_pos: 0,
             speed: 4,
             update_count: 0,
@@ -67,6 +70,52 @@ impl SnakeRenderPipeline {
     fn check_collision(&mut self, pos: Vec2f, sq: Vec2f) -> bool {
         (pos.x >= sq.x - self.tile_size / 2.0) && (pos.x <= sq.x + self.tile_size / 2.0) && 
             (pos.y >= sq.y - self.tile_size / 2.0) && (pos.y <= sq.y + self.tile_size / 2.0)
+    }
+
+    fn handle_movement(&mut self, direction: Vec2f) {
+        let mut previous_head = self.pos[0];
+
+        self.update_count = 0;
+
+        self.pos[0] += direction * self.tile_size;
+
+        let half_tile_size = self.tile_size / 2.0;
+        if self.pos[0].x > 1.0 - half_tile_size {
+            self.pos[0].x = -1.0 + half_tile_size;
+        }
+        else if self.pos[0].x < -1.0 + half_tile_size {
+            self.pos[0].x = 1.0 - half_tile_size;
+        }
+
+        if self.pos[0].y > 1.0 - half_tile_size {
+            self.pos[0].y = -1.0 + half_tile_size;
+        }
+        else if self.pos[0].y < -1.0 + half_tile_size {
+            self.pos[0].y = 1.0 - half_tile_size;
+        }
+
+        // Update other segments, and check for self collisions.
+        for i in 1..self.pos.len() {
+            let temp = self.pos[i];
+            self.pos[i] = previous_head;
+            previous_head = temp;
+
+            if self.check_collision(self.pos[0], self.pos[i]) {
+                self.game_over = true;
+            }
+        }
+
+        // Check for collisions with food.
+        match self.next_segment_pos {
+            None => self.spawn_segment(),
+            Some(segment_pos) => {
+                if self.check_collision(self.pos[0], segment_pos) {
+                    self.pos.push(previous_head);
+                    self.spawn_segment();
+                }
+            }
+        }
+
     }
 }
 
@@ -106,64 +155,24 @@ impl RenderPipelineHandler for SnakeRenderPipeline {
     fn update(&mut self, input: &Box<dyn MouseKeyboardInputControl>) {
         self.update_count += 1;
         if self.update_count >= self.speed && !self.game_over {
-            let mut previous_head = self.pos[0];
-
-            self.update_count = 0;
-
-            self.pos[0] += self.movement_direction * self.tile_size;
-
-            let half_tile_size = self.tile_size / 2.0;
-            if self.pos[0].x > 1.0 - half_tile_size {
-                self.pos[0].x = -1.0 + half_tile_size;
-            }
-            else if self.pos[0].x < -1.0 + half_tile_size {
-                self.pos[0].x = 1.0 - half_tile_size;
-            }
-
-            if self.pos[0].y > 1.0 - half_tile_size {
-                self.pos[0].y = -1.0 + half_tile_size;
-            }
-            else if self.pos[0].y < -1.0 + half_tile_size {
-                self.pos[0].y = 1.0 - half_tile_size;
-            }
-
-            // Update other segments, and check for self collisions.
-            for i in 1..self.pos.len() {
-                let temp = self.pos[i];
-                self.pos[i] = previous_head;
-                previous_head = temp;
-
-                if self.check_collision(self.pos[0], self.pos[i]) {
-                    self.game_over = true;
-                }
-            }
-
-            // Check for collisions with food.
-            match self.next_segment_pos {
-                None => self.spawn_segment(),
-                Some(segment_pos) => {
-                    if self.check_collision(self.pos[0], segment_pos) {
-                        self.pos.push(previous_head);
-                        self.spawn_segment();
-                    }
-                }
-            }
+            self.handle_movement(self.movement_direction);
+            self.last_movement_direction = self.movement_direction;
         }
 
         // Update new input.
-        if (input.is_key_down(core_engine::Key::W) || input.is_key_clicked(core_engine::Key::W)) && (self.pos.len() == 1 || self.movement_direction.y != -1.0 ) {
+        if (input.is_key_down(core_engine::Key::W) || input.is_key_clicked(core_engine::Key::W)) && (self.pos.len() == 1 || self.last_movement_direction.y != -1.0 ) {
             self.movement_direction = Vec2f::new(0.0, 1.0);
         }
 
-        if (input.is_key_down(core_engine::Key::S) || input.is_key_clicked(core_engine::Key::S)) && (self.pos.len() == 1 || self.movement_direction.y != 1.0) {
+        if (input.is_key_down(core_engine::Key::S) || input.is_key_clicked(core_engine::Key::S)) && (self.pos.len() == 1 || self.last_movement_direction.y != 1.0) {
             self.movement_direction = Vec2f::new(0.0, -1.0);
         }
 
-        if (input.is_key_down(core_engine::Key::A) || input.is_key_clicked(core_engine::Key::A)) && (self.pos.len() == 1 || self.movement_direction.x != 1.0) {
+        if (input.is_key_down(core_engine::Key::A) || input.is_key_clicked(core_engine::Key::A)) && (self.pos.len() == 1 || self.last_movement_direction.x != 1.0) {
             self.movement_direction = Vec2f::new(-1.0, 0.0);
         }
 
-        if (input.is_key_down(core_engine::Key::D) || input.is_key_clicked(core_engine::Key::D)) && (self.pos.len() == 1 || self.movement_direction.x != -1.0) {
+        if (input.is_key_down(core_engine::Key::D) || input.is_key_clicked(core_engine::Key::D)) && (self.pos.len() == 1 || self.last_movement_direction.x != -1.0) {
             self.movement_direction = Vec2f::new(1.0, 0.0);
         }
     }
