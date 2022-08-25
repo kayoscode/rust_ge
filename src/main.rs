@@ -2,6 +2,7 @@ use core_engine::{self, engine::GameManager, shader_program::{ShaderProgram, Sha
 use glmath::glmath::Vec2f;
 use core_engine::render_pipeline::*;
 use rand::Rng;
+use timer::Stopwatch;
 
 struct SnakeRenderPipeline {
     background_mesh: Mesh2D,
@@ -53,7 +54,7 @@ impl SnakeRenderPipeline {
             movement_direction: Vec2f::new(0.0, 1.0),
             last_movement_direction: Vec2f::new(0.0, 0.0),
             location_pos: 0,
-            speed: 4,
+            speed: 9,
             update_count: 0,
             next_segment_pos: None,
             game_over: false,
@@ -109,6 +110,8 @@ impl SnakeRenderPipeline {
 
             if self.check_collision(self.pos[0], self.pos[i]) {
                 self.game_over = true;
+                println!("Game over!");
+                println!("Score: {}", self.pos.len());
             }
         }
 
@@ -203,7 +206,16 @@ fn main() {
             game_manager.add_render_pipeline(Box::new(pipeline));
             game_manager.init();
 
+            let mut _frame_timer = Stopwatch::new();
+            let mut _fps = 0;
             while !game_manager.update() {
+                _fps += 1;
+
+                if _frame_timer.elapsed_seconds() >= 1.0 {
+                    println!("{}", _fps);
+                    _frame_timer.start();
+                    _fps = 0;
+                }
             }
         },
         None => {
